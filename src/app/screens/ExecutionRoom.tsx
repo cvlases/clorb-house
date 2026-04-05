@@ -1,7 +1,7 @@
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Check, X } from "lucide-react";
+import { Check, X, MessageCircle } from "lucide-react";
 import imgClorb from "../../imports/IPhone1612/749af56786e9c6161adfcf899904dec36b1941a5.png";
 import { CLORB_MESSAGES, getTaskById } from "../constants/tasks";
 import { TASK_ANIMATIONS, getSpeechLine, VIGIL_COPY } from "../constants/taskConfig";
@@ -86,6 +86,9 @@ export default function ExecutionRoom() {
   const [hoveredClorb, setHoveredClorb]   = useState<string | null>(null);
   const [hoveredMessage, setHoveredMessage] = useState("");
   const [addTimeFlash, setAddTimeFlash]   = useState<number | null>(null);
+  const [userMessage,  setUserMessage]    = useState<string | null>(null);
+  const [showMsgInput, setShowMsgInput]   = useState(false);
+  const [draftMsg,     setDraftMsg]       = useState("");
 
   const timeLeftRef = useRef(timeLeft);
   timeLeftRef.current = timeLeft;
@@ -284,9 +287,26 @@ export default function ExecutionRoom() {
               style={{ width: isUser ? 58 : 46, height: isUser ? 58 : 46, objectFit: "contain", display: "block", userSelect: "none" }}
             />
             {isUser && (
-              <div style={{ position: "absolute", top: -14, left: "50%", transform: "translateX(-50%)", backgroundColor: "#beff6c", border: "1px solid black", borderRadius: 5, padding: "1px 4px" }}>
+              <div style={{ position: "absolute", top: "calc(100% + 4px)", left: "50%", transform: "translateX(-50%)", backgroundColor: "#beff6c", border: "1px solid black", borderRadius: 5, padding: "1px 4px" }}>
                 <span style={{ fontFamily: "'Work Sans', sans-serif", fontWeight: 700, fontSize: 8, color: "black", whiteSpace: "nowrap" }}>you</span>
               </div>
+            )}
+            {/* Persistent user message bubble */}
+            {isUser && userMessage && (
+              <motion.div
+                className="absolute pointer-events-none"
+                style={{ bottom: "calc(100% + 20px)", left: "50%", translateX: "-50%", zIndex: 20, minWidth: 120, maxWidth: 200 }}
+                initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ type: "spring", damping: 16, stiffness: 260 }}
+              >
+                <div style={{ backgroundColor: "#fff85a", border: "2.5px solid black", borderRadius: "12px 12px 4px 12px", padding: "7px 11px", position: "relative", boxShadow: "2px 2px 0 0 black" }}>
+                  <p style={{ fontFamily: "'Work Sans', sans-serif", fontWeight: 700, fontSize: 11, color: "black", textAlign: "center", lineHeight: 1.4 }}>
+                    {userMessage}
+                  </p>
+                  <div style={{ position: "absolute", bottom: -7, right: 10, width: 0, height: 0, borderLeft: "4px solid transparent", borderRight: "8px solid transparent", borderTop: "8px solid black" }} />
+                </div>
+              </motion.div>
             )}
           </motion.div>
         );
@@ -375,6 +395,17 @@ export default function ExecutionRoom() {
                 {btn.label ?? btn.icon}
               </motion.button>
             ))}
+            {/* Say something — one-shot, disappears after use */}
+            {!userMessage && (
+              <motion.button
+                onClick={() => { setDraftMsg(""); setShowMsgInput(true); }}
+                style={{ width: 42, height: 42, borderRadius: "50%", border: "2px solid black", backgroundColor: "white", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "2px 2px 0 0 black", cursor: "pointer" }}
+                whileTap={{ scale: 0.88 }}
+                title="Say something"
+              >
+                <MessageCircle size={18} />
+              </motion.button>
+            )}
           </div>
         </div>
       )}
@@ -391,6 +422,77 @@ export default function ExecutionRoom() {
             <div style={{ backgroundColor: "#beff6c", border: "2px solid black", borderRadius: 10, padding: "4px 12px" }}>
               <span style={{ fontFamily: "'Work Sans', sans-serif", fontWeight: 700, fontSize: 14, color: "black" }}>+{addTimeFlash}m</span>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Say something modal ──────────────────────────────────────── */}
+      <AnimatePresence>
+        {showMsgInput && (
+          <motion.div
+            className="absolute inset-0 flex items-center justify-center"
+            style={{ backgroundColor: "rgba(0,0,0,0.55)", zIndex: 40 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowMsgInput(false)}
+          >
+            <motion.div
+              style={{ backgroundColor: "#fefdf8", border: "4px solid black", borderRadius: 20, padding: 22, width: 320, boxShadow: "6px 6px 0 0 black" }}
+              initial={{ scale: 0.85, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.85 }}
+              transition={{ type: "spring", damping: 18 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p style={{ fontFamily: "'Kodchasan', sans-serif", fontWeight: 700, fontSize: 20, textAlign: "center", marginBottom: 4 }}>
+                say something 💬
+              </p>
+              <p style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 12, textAlign: "center", color: "rgba(0,0,0,0.5)", marginBottom: 14 }}>
+                your clorb will hold this message for the rest of the task
+              </p>
+              <input
+                autoFocus
+                maxLength={40}
+                value={draftMsg}
+                onChange={(e) => setDraftMsg(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && draftMsg.trim()) {
+                    setUserMessage(draftMsg.trim());
+                    setShowMsgInput(false);
+                  }
+                }}
+                placeholder="keep it short..."
+                style={{ width: "100%", border: "2.5px solid black", borderRadius: 12, padding: "10px 14px", fontFamily: "'Work Sans', sans-serif", fontSize: 14, outline: "none", backgroundColor: "white", boxSizing: "border-box", marginBottom: 12 }}
+              />
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
+                <span style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 11, color: "rgba(0,0,0,0.35)" }}>
+                  {draftMsg.length}/40
+                </span>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <motion.button
+                    onClick={() => setShowMsgInput(false)}
+                    style={{ border: "2px solid black", borderRadius: 12, padding: "8px 16px", cursor: "pointer", backgroundColor: "white", fontFamily: "'Work Sans', sans-serif", fontWeight: 600, fontSize: 13 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    Cancel
+                  </motion.button>
+                  <motion.button
+                    onClick={() => {
+                      if (draftMsg.trim()) {
+                        setUserMessage(draftMsg.trim());
+                        setShowMsgInput(false);
+                      }
+                    }}
+                    disabled={!draftMsg.trim()}
+                    style={{ border: "2px solid black", borderRadius: 12, padding: "8px 16px", cursor: draftMsg.trim() ? "pointer" : "not-allowed", backgroundColor: draftMsg.trim() ? "#fff85a" : "#e0e0e0", fontFamily: "'Work Sans', sans-serif", fontWeight: 700, fontSize: 13, boxShadow: draftMsg.trim() ? "2px 2px 0 0 black" : "none" }}
+                    whileTap={{ scale: draftMsg.trim() ? 0.95 : 1 }}
+                  >
+                    Send
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
