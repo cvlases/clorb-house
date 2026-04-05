@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 
-// ─── Room positions (landscape room, 844×390) ─────────────────────────────────
 const ROOM_POSITIONS = [
   { xPct: 12, yPct: 32 },
   { xPct: 24, yPct: 56 },
@@ -16,21 +15,13 @@ const ROOM_POSITIONS = [
   { xPct: 62, yPct: 66 },
 ]
 
-/**
- * useRoom — join a Supabase Realtime Presence channel for a chore room.
- *
- * Returns roomClorbs: the live list of users in the room, shaped for
- * ExecutionRoom to render directly (same structure as the old mock clorbs).
- */
 export function useRoom(choreType) {
   const { user, displayName } = useAuth()
   const [roomClorbs, setRoomClorbs] = useState([])
 
-  // Stable position map: userId → { xPct, yPct }
-  // Positions are assigned on first appearance and never reassigned.
-  const posMap      = useRef(new Map())
-  const nextPosIdx  = useRef(1) // index 0 reserved for the current user
-  const channelRef  = useRef(null)
+  const posMap     = useRef(new Map())
+  const nextPosIdx = useRef(1)
+  const channelRef = useRef(null)
 
   function assignPosition(userId) {
     if (userId === user?.id) return ROOM_POSITIONS[0]
@@ -46,16 +37,16 @@ export function useRoom(choreType) {
     const clorbs = entries.map((entry, idx) => {
       const pos = assignPosition(entry.user_id)
       return {
-        id:             entry.user_id,
-        taskId:         entry.chore_type,
-        displayName:    entry.display_name,
-        isUser:         entry.user_id === user?.id,
-        xPct:           pos.xPct,
-        yPct:           pos.yPct,
+        id:           entry.user_id,
+        taskId:       entry.chore_type,
+        displayName:  entry.display_name,
+        userMessage:  entry.user_message ?? null,
+        isUser:       entry.user_id === user?.id,
+        xPct:         pos.xPct,
+        yPct:         pos.yPct,
         animationDelay: idx * 0.08,
       }
     })
-    // Current user's clorb always first so vigil logic can rely on it
     clorbs.sort((a, b) => (b.isUser ? 1 : 0) - (a.isUser ? 1 : 0))
     return clorbs
   }
@@ -63,15 +54,15 @@ export function useRoom(choreType) {
   useEffect(() => {
     if (!user || !choreType) return
 
-    // Show the user's own clorb immediately — don't wait for Presence to sync
     posMap.current.set(user.id, ROOM_POSITIONS[0])
     setRoomClorbs([{
-      id:             user.id,
-      taskId:         choreType,
+      id:           user.id,
+      taskId:       choreType,
       displayName,
-      isUser:         true,
-      xPct:           ROOM_POSITIONS[0].xPct,
-      yPct:           ROOM_POSITIONS[0].yPct,
+      userMessage:  null,
+      isUser:       true,
+      xPct:         ROOM_POSITIONS[0].xPct,
+      yPct:         ROOM_POSITIONS[0].yPct,
       animationDelay: 0,
     }])
 
@@ -81,28 +72,28 @@ export function useRoom(choreType) {
     channelRef.current = channel
 
     channel
-      .on('presence', { event: 'sync' }, () => {
-        setRoomClorbs(buildClorbs(channel.presenceState()))
-      })
-      .on('presence', { event: 'join' }, () => {
-        setRoomClorbs(buildClorbs(channel.presenceState()))
-      })
-      .on('presence', { event: 'leave' }, () => {
-        setRoomClorbs(buildClorbs(channel.presenceState()))
-      })
+      .on('presence', { event: 'sync' },  () => setRoomClorbs(buildClorbs(channel.presenceState())))
+      .on('presence', { event: 'join' },  () => setRoomClorbs(buildClorbs(channel.presenceState())))
+      .on('presence', { event: 'leave' }, () => setRoomClorbs(buildClorbs(channel.presenceState())))
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
           await channel.track({
-            user_id:     user.id,
+            user_id:      user.id,
             display_name: displayName,
-            chore_type:  choreType,
-            started_at:  new Date().toISOString(),
+            chore_type:   choreType,
+            started_at:   new Date().toISOString(),
+            user_message: null,
           })
         }
       })
 
     return () => {
-      channel.untrack().then(() => supabase.removeChannel(channel))
+      // Guard: leaveRoom() may have already cleaned up
+      const ch = channelRef.current
+      if (ch) {
+        channelRef.current = null
+        ch.untrack().then(() => supabase.removeChannel(ch))
+      }
     }
   }, [user?.id, choreType]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -114,5 +105,18 @@ export function useRoom(choreType) {
     channelRef.current = null
   }, [])
 
-  return { roomClorbs, leaveRoom }
+  // Re-tracks with the new message so all other clients see it immediately
+  const updateMessage = useCallback(async (message) => {
+    const ch = channelRef.current
+    if (!ch || !user) return
+    await ch.track({
+      user_id:      user.id,
+      display_name: displayName,
+      chore_type:   choreType,
+      started_at:   new Date().toISOString(),
+      user_message: message,
+    })
+  }, [user, displayName, choreType])
+
+  return { roomClorbs, leaveRoom, updateMessage }
 }

@@ -32,7 +32,7 @@ type Phase = "active" | "give-up-confirm" | "vigil" | "complete";
 
 // ─── Mock room data ────────────────────────────────────────────────────────────
 // Replace `makeMockClorbs` with a backend fetch when ready.
-const ALL_TASK_IDS = ["laundry", "dishes", "tidying", "cooking", "working", "studying", "errands"];
+const ALL_TASK_IDS = ["laundry", "emails", "bed", "dishes", "sweep", "trash", "misc"];
 
 const ROOM_POSITIONS = [
   { xPct: 10, yPct: 30 },
@@ -77,7 +77,7 @@ export default function ExecutionRoom() {
   const duration   = parseInt(searchParams.get("duration") || "30");
 
   const currentTask = getTaskById(task);
-  const { roomClorbs, leaveRoom } = useRoom(currentTask.id);
+  const { roomClorbs, leaveRoom, updateMessage } = useRoom(currentTask.id);
   const { startSession, completeSession, abandonSession } = useChoreSession();
   const vigilCircle   = useRef<ReturnType<typeof getVigilPositions>>([]);
 
@@ -135,7 +135,8 @@ export default function ExecutionRoom() {
         if (prev <= 1) {
           clearInterval(t);
           setPhase("complete");
-          completeSession().then(() => leaveRoom());
+          leaveRoom();
+          completeSession();
           setTimeout(() => navigate("/reward"), 600);
           return 0;
         }
@@ -168,7 +169,7 @@ export default function ExecutionRoom() {
     setTimeout(() => setVigilStep(2), 2000);       // (2) surrounding clorbs form circle
     setTimeout(() => setVigilStep(3), 3800);       // (3) gravestone rises + user clorb vanishes
     setTimeout(() => setVigilStep(4), 6000);       // (4) dark overlay + text
-    setTimeout(() => { leaveRoom(); navigate("/todo"); }, 11000); // (5) navigate
+    setTimeout(async () => { await leaveRoom(); navigate("/todo"); }, 11000); // (5) navigate
   }, [navigate, roomClorbs.length, abandonSession, leaveRoom]);
 
   const minutes = Math.floor(timeLeft / 60);
@@ -261,7 +262,7 @@ export default function ExecutionRoom() {
             onMouseEnter={() => {
               if (!isUser && phase === "active") {
                 setHoveredClorb(clorb.id);
-                setHoveredMessage(getSpeechLine(clorb.taskId));
+                setHoveredMessage(clorb.userMessage ?? getSpeechLine(clorb.taskId));
               }
             }}
             onMouseLeave={() => setHoveredClorb(null)}
@@ -269,7 +270,7 @@ export default function ExecutionRoom() {
               if (!isUser && phase === "active") {
                 const t = setTimeout(() => {
                   setHoveredClorb(clorb.id);
-                  setHoveredMessage(getSpeechLine(clorb.taskId));
+                  setHoveredMessage(clorb.userMessage ?? getSpeechLine(clorb.taskId));
                 }, 300);
                 return () => clearTimeout(t);
               }
@@ -392,7 +393,7 @@ export default function ExecutionRoom() {
               style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#beff6c", border: "1px solid black" }}
             />
             <p style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 12, color: "black" }}>
-              <strong>{currentTask.clorbCount}</strong> Clorbs {currentTask.actionName}
+              <strong>{roomClorbs.length || currentTask.clorbCount}</strong> Clorbs {currentTask.actionName}
             </p>
           </div>
 
@@ -401,7 +402,7 @@ export default function ExecutionRoom() {
             {[
               { label: "+5m",  bg: "#d99bfe", action: () => { setTimeLeft(p => p + 300); setAddTimeFlash(5); setTimeout(() => setAddTimeFlash(null), 1200); } },
               { label: "+10m", bg: "#6bc6ff", action: () => { setTimeLeft(p => p + 600); setAddTimeFlash(10); setTimeout(() => setAddTimeFlash(null), 1200); } },
-              { icon: <Check size={18} />, bg: "#beff6c", action: () => { setPhase("complete"); completeSession().then(() => leaveRoom()); setTimeout(() => navigate("/reward"), 600); } },
+              { icon: <Check size={18} />, bg: "#beff6c", action: () => { setPhase("complete"); leaveRoom(); completeSession(); setTimeout(() => navigate("/reward"), 600); } },
               { icon: <X size={18} />,    bg: "#ff576a", action: () => setPhase("give-up-confirm") },
             ].map((btn, i) => (
               <motion.button
@@ -476,7 +477,9 @@ export default function ExecutionRoom() {
                 onChange={(e) => setDraftMsg(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && draftMsg.trim()) {
-                    setUserMessage(draftMsg.trim());
+                    const msg = draftMsg.trim();
+                    setUserMessage(msg);
+                    updateMessage(msg);
                     setShowMsgInput(false);
                   }
                 }}
@@ -498,7 +501,9 @@ export default function ExecutionRoom() {
                   <motion.button
                     onClick={() => {
                       if (draftMsg.trim()) {
-                        setUserMessage(draftMsg.trim());
+                        const msg = draftMsg.trim();
+                        setUserMessage(msg);
+                        updateMessage(msg);
                         setShowMsgInput(false);
                       }
                     }}

@@ -28,9 +28,10 @@ h1, h2, h3, h4, h5, h6 {
   overflow: hidden;
 }
 
-/* On mobile, root fills the screen */
-@media (max-width: 767px) {
+/* On mobile (portrait or landscape), root fills the screen */
+@media (max-width: 767px), (max-height: 500px) {
   html, body, #root {
+    width: 100%;
     height: 100dvh;
     overflow: hidden;
   }

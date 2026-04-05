@@ -3,9 +3,7 @@ import { supabase } from '../lib/supabase'
 
 /**
  * useLiveCounts — subscribes (read-only) to all chore room presence channels
- * and returns a map of { [choreType]: count } updated in real time.
- *
- * Used by TodoList to show how many Clorbs are currently in each room.
+ * and returns a live map of { [choreType]: count }.
  */
 export function useLiveCounts(choreTypes) {
   const [counts, setCounts] = useState({})
@@ -16,10 +14,15 @@ export function useLiveCounts(choreTypes) {
     const channels = choreTypes.map((type) => {
       const ch = supabase.channel(`room:${type}`)
 
-      ch.on('presence', { event: 'sync' }, () => {
+      const update = () => {
         const count = Object.values(ch.presenceState()).flat().length
         setCounts((prev) => ({ ...prev, [type]: count }))
-      }).subscribe()
+      }
+
+      ch.on('presence', { event: 'sync' },  update)
+        .on('presence', { event: 'join' },  update)
+        .on('presence', { event: 'leave' }, update)
+        .subscribe()
 
       return ch
     })
