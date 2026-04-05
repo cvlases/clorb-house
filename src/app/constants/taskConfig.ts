@@ -15,13 +15,13 @@ import dishesIcon   from "@/assets/icons/dishes_icon.png";
 import sweepIcon    from "@/assets/icons/sweep_icon.png";
 import miscIcon     from "@/assets/icons/miscellaneous_icon.png";
 import emailIcon    from "@/assets/icons/email_icon.png";
-import listIcon     from "@/assets/icons/list_icon.png";
+import bedIcon      from "@/assets/icons/bed_icon.png";
 import trashIcon    from "@/assets/icons/trash_icon.png";
 
 export const TASK_ICONS: Record<string, string> = {
   laundry: laundryIcon,
   emails:  emailIcon,
-  bed:     listIcon,
+  bed:     bedIcon,
   dishes:  dishesIcon,
   sweep:   sweepIcon,
   trash:   trashIcon,

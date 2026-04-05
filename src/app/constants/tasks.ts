@@ -17,17 +17,17 @@ export const TASKS = [
     emoji: "📧",
     estimatedTime: "10-30 minutes",
     clorbCount: 214,
-    category: "frequent",
+    category: "office",
   },
   {
     id: "bed",
     name: "Make Your Bed",
     actionName: "making their bed",
-    color: "#FFAA00",
+    color: "#FFF172",
     emoji: "🛏️",
     estimatedTime: "2-5 minutes",
     clorbCount: 156,
-    category: "frequent",
+    category: "bedroom",
   },
   {
     id: "dishes",
@@ -37,7 +37,7 @@ export const TASKS = [
     emoji: "🍽️",
     estimatedTime: "5-10 minutes",
     clorbCount: 127,
-    category: "frequent",
+    category: "kitchen",
   },
   {
     id: "sweep",
@@ -57,7 +57,7 @@ export const TASKS = [
     emoji: "🗑️",
     estimatedTime: "5-10 minutes",
     clorbCount: 41,
-    category: "frequent",
+    category: "kitchen",
   },
   {
     id: "misc",
