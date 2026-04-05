@@ -5,6 +5,7 @@ import confetti from "canvas-confetti";
 import imgUntitled500X500Px61 from "../../imports/IPhone161/749af56786e9c6161adfcf899904dec36b1941a5.png";
 import { recordCompletion } from "../hooks/useGameState";
 import { COLLECTIBLE_ASSETS } from "../constants/taskConfig";
+import { supabase } from "../../lib/supabase";
 
 // TODO: Swap the 🎁 placeholder below with presentBox once the asset is added:
 // import presentBox from "@/assets/present_box.png";
@@ -76,12 +77,23 @@ export default function RewardScreen() {
     if (!reward) return;
     setIsRevealed(true);
 
-    // Save to game state
+    // Save to localStorage (local guilt system)
     recordCompletion({
       name: reward.name,
       rarity: reward.rarity,
       emoji: reward.emoji,
       description: reward.description,
+    });
+
+    // Save to DB shelf_items
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      supabase
+        .from("shelf_items")
+        .insert({ user_id: user.id, item_key: reward.name })
+        .then(({ error }) => {
+          if (error) console.error("[Reward] shelf_items insert failed:", error.message)
+        })
     });
 
     confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ["#FFD700", "#FF69B4", "#00CED1", "#9370DB"] });

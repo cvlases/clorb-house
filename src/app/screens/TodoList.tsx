@@ -7,6 +7,7 @@ import { TASKS, TASK_CATEGORIES } from "../constants/tasks";
 import { TASK_ICONS, TASK_TAGLINES } from "../constants/taskConfig";
 import { getGuiltLevel } from "../hooks/useGameState";
 import { TopNav } from "../components/TopNav";
+import { useLiveCounts } from "../../hooks/useLiveCounts";
 
 type Category = (typeof TASK_CATEGORIES)[number];
 type PanInfo = { velocity: { y: number }; offset: { y: number } };
@@ -29,6 +30,7 @@ export default function TodoList() {
   const guiltLevel  = getGuiltLevel();
   const sheetY      = useMotionValue(COLLAPSE_Y);
   const [activeCategory, setActiveCategory] = useState<Category>("frequent");
+  const liveCounts  = useLiveCounts(TASKS.map((t) => t.id));
 
   const snap = (to: number) =>
     animate(sheetY, to, { type: "spring", damping: 32, stiffness: 280 });
@@ -182,7 +184,7 @@ export default function TodoList() {
               <div className="flex-1 min-w-0">
                 <div className="mb-[4px]">
                   <span style={{ backgroundColor: "#beff6c", border: "1.5px solid black", borderRadius: 8, padding: "2px 8px", fontFamily: "'Work Sans', sans-serif", fontWeight: 700, fontSize: 11, color: "black", display: "inline-block", whiteSpace: "nowrap" }}>
-                    {task.clorbCount.toLocaleString()} Clorbs
+                    {(liveCounts[task.id] ?? task.clorbCount).toLocaleString()} Clorbs
                   </span>
                 </div>
                 <p style={{ fontFamily: "'Kodchasan', sans-serif", fontWeight: 700, fontSize: 14, lineHeight: 1.2, color: "black", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
