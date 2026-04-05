@@ -61,5 +61,7 @@ export const CHORE_LABELS = {
   dishes:  'dishes session',
   sweep:   'sweep session',
   trash:   'trash run',
+  dry:     'drying session',
+  wipe:    'wipe-down session',
   misc:    'misc chore',
 }
