@@ -1,48 +1,73 @@
 export const TASKS = [
-  { 
-    id: "laundry", 
-    name: "Do Laundry", 
+  {
+    id: "laundry",
+    name: "Do Laundry",
     actionName: "laundry",
-    color: "#49DBC8", 
+    color: "#49DBC8",
     emoji: "🧺",
     estimatedTime: "5min per 8 pieces",
     clorbCount: 103,
+    gifAsset: "/src/assets/doing-laundry.GIF",
   },
-  { 
-    id: "make-bed", 
-    name: "Make Bed", 
-    actionName: "making their bed",
-    color: "#FFF172", 
-    emoji: "🛏️",
-    estimatedTime: "2-3 minutes",
-    clorbCount: 28,
-  },
-  { 
-    id: "clean-dishes", 
-    name: "Clean Dishes", 
-    actionName: "cleaning dishes",
-    color: "#FD9FDD", 
+  {
+    id: "dishes",
+    name: "Dishes",
+    actionName: "doing dishes",
+    color: "#FD9FDD",
     emoji: "🍽️",
     estimatedTime: "5-10 minutes",
     clorbCount: 127,
+    gifAsset: "/src/assets/washing-dishes.GIF",
   },
-  { 
-    id: "take-out-trash", 
-    name: "Take Out Trash", 
-    actionName: "taking out trash",
-    color: "#AF96FB", 
-    emoji: "🗑️",
-    estimatedTime: "1-2 minutes",
-    clorbCount: 78,
-  },
-  { 
-    id: "clean-floors", 
-    name: "Clean Floors", 
-    actionName: "cleaning floors",
-    color: "#FC7339", 
+  {
+    id: "tidying",
+    name: "Tidying",
+    actionName: "tidying up",
+    color: "#FFF172",
     emoji: "🧹",
-    estimatedTime: "10-15 minutes",
-    clorbCount: 45,
+    estimatedTime: "10-20 minutes",
+    clorbCount: 89,
+    gifAsset: "/src/assets/cleaning-table.GIF",
+  },
+  {
+    id: "cooking",
+    name: "Cooking",
+    actionName: "cooking",
+    color: "#FC7339",
+    emoji: "🍳",
+    estimatedTime: "20-45 minutes",
+    clorbCount: 62,
+    gifAsset: null,
+  },
+  {
+    id: "working",
+    name: "Working",
+    actionName: "working",
+    color: "#AF96FB",
+    emoji: "💻",
+    estimatedTime: "25-90 minutes",
+    clorbCount: 214,
+    gifAsset: null,
+  },
+  {
+    id: "studying",
+    name: "Studying",
+    actionName: "studying",
+    color: "#6BC6FF",
+    emoji: "📚",
+    estimatedTime: "25-60 minutes",
+    clorbCount: 156,
+    gifAsset: null,
+  },
+  {
+    id: "errands",
+    name: "Running Errands",
+    actionName: "running errands",
+    color: "#BEFF6C",
+    emoji: "🚗",
+    estimatedTime: "15-60 minutes",
+    clorbCount: 41,
+    gifAsset: null,
   },
 ];
 
@@ -57,10 +82,12 @@ export const CLORB_MESSAGES = [
   "Time flies when you're... doing chores?",
   "Remember: Every journey begins with a single sock.",
   "The void appreciates your effort. Kind of.",
+  "You're literally doing it right now. Incredible.",
+  "Stay strong. The task cannot hurt you.",
 ];
 
-export type TaskId = typeof TASKS[number]['id'];
+export type TaskId = typeof TASKS[number]["id"];
 
 export function getTaskById(id: string | undefined) {
-  return TASKS.find(task => task.id === id) || TASKS[0];
+  return TASKS.find((task) => task.id === id) || TASKS[0];
 }

@@ -7,6 +7,7 @@ import ExecutionRoom from "./screens/ExecutionRoom";
 import Reward from "./screens/Reward";
 import Funeral from "./screens/Funeral";
 import TodoList from "./screens/TodoList";
+import Shelf from "./screens/Shelf";
 
 export const router = createBrowserRouter([
   {
@@ -40,5 +41,9 @@ export const router = createBrowserRouter([
   {
     path: "/funeral",
     Component: Funeral,
+  },
+  {
+    path: "/shelf",
+    Component: Shelf,
   },
 ]);
