@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { useState } from "react";
 import { ChevronUp, ChevronDown, ArrowLeft } from "lucide-react";
 import svgPaths from "../../imports/IPhone168/svg-hh2rnczwo7";
-import imgUntitled500X500Px61 from "../../imports/IPhone168/749af56786e9c6161adfcf899904dec36b1941a5.png";
+import floatingClorb from "@/assets/clorb_animations/floating-clorb.mp4";
 import { getTaskById } from "../constants/tasks";
 
 const QUICK_SELECT = [
@@ -50,25 +50,27 @@ export default function TimeSelect() {
         <ArrowLeft size={18} color="white" />
       </motion.button>
 
-      <p className="-translate-x-1/2 absolute font-['Kodchasan:Bold',sans-serif] leading-[1.2] left-[calc(50%+0.5px)] not-italic text-[#020202] text-[36px] text-center top-[58px] tracking-[-0.72px] w-[350px]">
+      <p
+        className="-translate-x-1/2 absolute left-[calc(50%+0.5px)] text-center top-[52px] w-[340px]"
+        style={{ fontFamily: "'Kodchasan', sans-serif", fontWeight: 700, fontSize: 28, lineHeight: 1.15, color: "#020202", letterSpacing: "-0.56px" }}
+      >
         How long will you be {currentTask.actionName}?
       </p>
 
-      <p className="-translate-x-1/2 absolute font-['Work_Sans:Medium',sans-serif] font-medium leading-[1.1] left-[calc(50%+0.5px)] text-[20px] text-black text-center top-[19.43%] w-[294px]">
+      <p className="-translate-x-1/2 absolute font-['Work_Sans:Medium',sans-serif] font-medium leading-[1.1] left-[calc(50%+0.5px)] text-[16px] text-black text-center top-[22%] w-[294px]">
         We estimate {currentTask.estimatedTime}.
       </p>
 
-      <motion.div
-        className="-translate-x-1/2 absolute left-[calc(50%+6.5px)] size-[260px] top-[260px]"
-        animate={{ rotate: [0, 3, -3, 0] }}
-        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-      >
-        <img
-          alt="Clorb character"
-          className="absolute inset-0 max-w-none object-cover pointer-events-none size-full"
-          src={imgUntitled500X500Px61}
+      <div className="-translate-x-1/2 absolute left-[calc(50%+6.5px)] size-[260px] top-[260px]">
+        <video
+          src={floatingClorb}
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 size-full object-contain pointer-events-none"
         />
-      </motion.div>
+      </div>
 
       {/* Time Selection Panel */}
       <div className="-translate-x-1/2 absolute bottom-0 bg-[#fefdf8] border-black border-solid border-t-4 h-[355px] left-1/2 rounded-tl-[24px] rounded-tr-[24px] w-[390px]">
@@ -100,9 +102,9 @@ export default function TimeSelect() {
             <button onClick={incrementHours} className="cursor-pointer">
               <ChevronUp className="text-[#fefdf8]" size={22} />
             </button>
-            <div className="bg-[#beff6c] h-[114px] w-[123px] rounded-[18px] flex flex-col items-center justify-center font-['Work_Sans:Medium',sans-serif] font-medium text-black text-center">
+            <div className="bg-[#beff6c] h-[114px] w-[123px] rounded-[18px] flex flex-col items-center justify-center font-['Kodchasan:Bold',sans-serif] font-bold text-black text-center">
               <p className="text-[64px] leading-none">{String(hours).padStart(2, "0")}</p>
-              <p className="text-[14px] leading-[16px] mt-[4px]">HOURS</p>
+              <p className="text-[14px] leading-[16px] mt-[4px] tracking-[0.08em]">HOURS</p>
             </div>
             <button onClick={decrementHours} className="cursor-pointer">
               <ChevronDown className="text-[#fefdf8]" size={22} />
@@ -114,9 +116,9 @@ export default function TimeSelect() {
             <button onClick={incrementMinutes} className="cursor-pointer">
               <ChevronUp className="text-[#fefdf8]" size={22} />
             </button>
-            <div className="bg-[#49dbc8] h-[114px] w-[123px] rounded-[18px] flex flex-col items-center justify-center font-['Work_Sans:Medium',sans-serif] font-medium text-black text-center">
+            <div className="bg-[#49dbc8] h-[114px] w-[123px] rounded-[18px] flex flex-col items-center justify-center font-['Kodchasan:Bold',sans-serif] font-bold text-black text-center">
               <p className="text-[64px] leading-none">{String(minutes).padStart(2, "0")}</p>
-              <p className="text-[14px] leading-[16px] mt-[4px]">MINUTES</p>
+              <p className="text-[14px] leading-[16px] mt-[4px] tracking-[0.08em]">MINUTES</p>
             </div>
             <button onClick={decrementMinutes} className="cursor-pointer">
               <ChevronDown className="text-[#fefdf8]" size={22} />

@@ -5,6 +5,7 @@ import imgBackground from "../../imports/IPhone165/8ed2eefc22017c6fe97892a6d10d9
 import imgClorb from "../../imports/IPhone165/749af56786e9c6161adfcf899904dec36b1941a5.png";
 import { TASKS, TASK_CATEGORIES } from "../constants/tasks";
 import { TASK_ICONS, TASK_TAGLINES } from "../constants/taskConfig";
+import listIcon from "@/assets/icons/list_icon.png";
 import { getGuiltLevel } from "../hooks/useGameState";
 import { TopNav } from "../components/TopNav";
 import { useLiveCounts } from "../../hooks/useLiveCounts";
@@ -105,10 +106,11 @@ export default function TodoList() {
         </div>
 
         {/* Title */}
-        <div className="px-[20px] pt-[2px] pb-[8px]">
-          <p style={{ fontFamily: "'Kodchasan', sans-serif", fontWeight: 700, fontSize: 22, color: "black" }}>
+        <div className="px-[20px] pt-[2px] pb-[8px] flex items-center justify-between">
+          <p className="font-['Kodchasan:Bold',sans-serif] font-bold text-[22px] text-black tracking-[-0.44px]">
             To Do List
           </p>
+          <img src={listIcon} alt="" className="w-[28px] h-[28px] object-contain" />
         </div>
 
         {/* ── Shortcut icons (visible in collapsed state) ─────────────── */}
@@ -187,7 +189,7 @@ export default function TodoList() {
                     {(liveCounts[task.id] ?? task.clorbCount).toLocaleString()} Clorbs
                   </span>
                 </div>
-                <p style={{ fontFamily: "'Kodchasan', sans-serif", fontWeight: 700, fontSize: 14, lineHeight: 1.2, color: "black", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <p className="font-['Kodchasan:Bold',sans-serif] font-bold text-[14px] text-black overflow-hidden text-ellipsis whitespace-nowrap" style={{ lineHeight: 1.2 }}>
                   {task.name}
                 </p>
                 <p style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 11, color: "rgba(0,0,0,0.5)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
