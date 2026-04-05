@@ -57,37 +57,38 @@ export const TASK_ANIMATIONS: Record<string, string | null> = {
 };
 
 // ─── Collectible Asset Mapping ─────────────────────────────────────────────────
-import macaroniAsset   from "@/assets/collectibles/macaroni.png";
-import spongeAsset     from "@/assets/collectibles/sponge.png";
-import rubberbandAsset from "@/assets/collectibles/rubberband.png";
-import ticketAsset     from "@/assets/collectibles/ticket.png";
-import awardAsset      from "@/assets/collectibles/award.png";
-import receiptAsset    from "@/assets/collectibles/receipt.png";
-import stickynoteAsset from "@/assets/collectibles/stickynote.png";
-import sockAsset       from "@/assets/collectibles/sock.png";
-import spoonAsset      from "@/assets/collectibles/spoon.png";
-import shoeAsset       from "@/assets/collectibles/shoe.png";
-import bagguetteAsset  from "@/assets/collectibles/bagguette.png";
-import teabagAsset     from "@/assets/collectibles/teabag.png";
-import buttonAsset     from "@/assets/collectibles/button.png";
+import macaroniAsset    from "@/assets/collectibles/macaroni.png";
+import spongeAsset      from "@/assets/collectibles/sponge.png";
+import soupAsset        from "@/assets/collectibles/soup.png";
+import ticketAsset      from "@/assets/collectibles/ticket.png";
+import awardAsset       from "@/assets/collectibles/award.png";
+import receiptAsset     from "@/assets/collectibles/receipt.png";
+import stickynoteAsset  from "@/assets/collectibles/stickynote.png";
+import sockAsset        from "@/assets/collectibles/sock.png";
+import teabagAsset      from "@/assets/collectibles/teabag.png";
+import buttonAsset      from "@/assets/collectibles/button.png";
+import bagguetteAsset   from "@/assets/collectibles/bagguette.png";
 import pizzapocketAsset from "@/assets/collectibles/pizzapocket.png";
+import rubberbandAsset  from "@/assets/collectibles/rubberband.png";
+import spoonAsset       from "@/assets/collectibles/spoon.png";
+import shoeAsset        from "@/assets/collectibles/shoe.png";
 
 export const COLLECTIBLE_ASSETS: Record<string, string> = {
-  "A single piece of dry macaroni":  macaroniAsset,
-  "A slightly damp sponge":          spongeAsset,
-  "A crumpled flashcard":            rubberbandAsset,
-  "An expired parking ticket":       ticketAsset,
-  "World's Okayest Clorb Mug":       awardAsset,
-  "A receipt from 2018":             receiptAsset,
-  "A used sticky note":              stickynoteAsset,
-  "Holey Socks (single)":            sockAsset,
-  "Tax Form Hat":                    spoonAsset,
-  "A mysterious lost key":           shoeAsset,
-  "A stale baguette":                bagguetteAsset,
-  "An empty coffee cup":             teabagAsset,
-  "The Ultimate Argyle Sock":        sockAsset,
-  "A vintage bottlecap":             buttonAsset,
-  "Melted Chocolate Bar":            pizzapocketAsset,
+  "A single piece of dry macaroni":        macaroniAsset,
+  "A slightly damp sponge":                spongeAsset,
+  "Lukewarm soup":                         soupAsset,
+  "An expired parking ticket":             ticketAsset,
+  "Participation award":                   awardAsset,
+  "A receipt from 2018":                   receiptAsset,
+  "A used sticky note":                    stickynoteAsset,
+  "A single sock":                         sockAsset,
+  "A soggy tea bag":                       teabagAsset,
+  "A button from a shirt you don't own":   buttonAsset,
+  "A stale baguette":                      bagguetteAsset,
+  "A half-baked pizza pocket":             pizzapocketAsset,
+  "A loose rubber band":                   rubberbandAsset,
+  "A very nice spoon":                     spoonAsset,
+  "A polly pocket shoe":                   shoeAsset,
 };
 
 // ─── Speech Bubble Messages ────────────────────────────────────────────────────
