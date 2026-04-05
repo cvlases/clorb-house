@@ -322,25 +322,25 @@ export default function ExecutionRoom() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ type: "spring", damping: 20, stiffness: 140 }}
           >
-            <svg width="56" height="72" viewBox="0 0 56 72" fill="none">
-              {/* Stone body */}
-              <rect x="8" y="34" width="40" height="34" rx="3" fill="#888" />
-              {/* Rounded arch top */}
-              <path d="M8 34 Q8 8 28 8 Q48 8 48 34Z" fill="#888" />
-              {/* Stone highlight */}
-              <rect x="8" y="34" width="40" height="34" rx="3" fill="url(#sg)" opacity="0.3" />
-              <defs>
-                <linearGradient id="sg" x1="8" y1="34" x2="48" y2="68" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%" stopColor="white" />
-                  <stop offset="100%" stopColor="transparent" />
-                </linearGradient>
-              </defs>
-              {/* Cross */}
-              <rect x="25" y="16" width="6" height="20" rx="1" fill="#aaa" />
-              <rect x="18" y="23" width="20" height="6" rx="1" fill="#aaa" />
+            <svg width="112" height="144" viewBox="0 0 56 72" fill="none">
+              {/* Stone body — white fill, sketchy black outline */}
+              <path d="M8,35 Q7.5,34 8,34 L48,34 Q48.5,34 48,35 L48.5,67.5 Q48,68.5 47,68 L9,68.5 Q8,68.5 7.5,67.5 Z" fill="white" />
+              <path d="M8,34 L48,34 L48.5,68 Q28,69 7.5,68 Z" fill="none" stroke="black" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+              {/* Arch top — white fill, sketchy outline */}
+              <path d="M8,35 Q7.5,8 28,7.5 Q48.5,8 48,35Z" fill="white" />
+              <path d="M8,35 Q7.5,8 28,7.5 Q48.5,8 48,35" fill="none" stroke="black" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+              {/* Side edges — slightly wobbly */}
+              <path d="M8,34 Q7.2,50 7.5,68" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" />
+              <path d="M48,34 Q48.8,50 48.5,68" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" />
+              {/* Cross — hand-drawn strokes */}
+              <path d="M27.5,16 Q28,15.5 28.5,16 L28.5,35.5 Q28,36 27.5,35.5 Z" fill="black" />
+              <path d="M18,23 Q17.5,23.5 18,24 L38,24 Q38.5,23.5 38,23 Z" fill="black" />
+              {/* Texture crack lines */}
+              <path d="M18,42 Q21,44 19,47" fill="none" stroke="black" strokeWidth="0.8" strokeLinecap="round" opacity="0.4" />
+              <path d="M34,50 Q37,52 35,56" fill="none" stroke="black" strokeWidth="0.8" strokeLinecap="round" opacity="0.35" />
               {/* Inscriptions */}
-              <text x="28" y="50" textAnchor="middle" fill="white" fontSize="9" fontFamily="'Work Sans', sans-serif" fontWeight="700">{VIGIL_COPY.gravestoneTitle}</text>
-              <text x="28" y="61" textAnchor="middle" fill="white" fontSize="6.5" fontFamily="'Work Sans', sans-serif">{VIGIL_COPY.gravestoneSubtitle}</text>
+              <text x="28" y="51" textAnchor="middle" fill="black" fontSize="9" fontFamily="'Work Sans', sans-serif" fontWeight="700">{VIGIL_COPY.gravestoneTitle}</text>
+              <text x="28" y="62" textAnchor="middle" fill="black" fontSize="6.5" fontFamily="'Work Sans', sans-serif">{VIGIL_COPY.gravestoneSubtitle}</text>
             </svg>
           </motion.div>
         )}
