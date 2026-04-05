@@ -1,12 +1,12 @@
 // ─── Task Taglines ────────────────────────────────────────────────────────────
 export const TASK_TAGLINES: Record<string, string> = {
-  laundry:  "the pile has achieved sentience.",
-  dishes:   "they've been 'soaking' for three days.",
-  tidying:  "just shove it under the bed. wait, no.",
-  cooking:  "delivery doesn't count. (it counts.)",
-  working:  "the emails are breeding in the dark.",
-  studying: "highlighting IS the same as knowing it.",
-  errands:  "the outside world has been asking about you.",
+  laundry: "the pile has achieved sentience.",
+  emails:  "they are breeding in the dark. respond.",
+  bed:     "it takes two minutes. it has been two weeks.",
+  dishes:  "they've been 'soaking' for three days.",
+  sweep:   "just shove it under the bed. wait, no.",
+  trash:   "the bag is full and you know it.",
+  misc:    "whatever it is, it must be done.",
 };
 
 // ─── Task Icons ────────────────────────────────────────────────────────────────
@@ -19,13 +19,13 @@ import listIcon     from "@/assets/icons/list_icon.png";
 import trashIcon    from "@/assets/icons/trash_icon.png";
 
 export const TASK_ICONS: Record<string, string> = {
-  laundry:  laundryIcon,
-  dishes:   dishesIcon,
-  tidying:  sweepIcon,
-  cooking:  miscIcon,
-  working:  emailIcon,
-  studying: listIcon,
-  errands:  trashIcon,
+  laundry: laundryIcon,
+  emails:  emailIcon,
+  bed:     listIcon,
+  dishes:  dishesIcon,
+  sweep:   sweepIcon,
+  trash:   trashIcon,
+  misc:    miscIcon,
 };
 
 // ─── Task Animations ─────────────────────────────────────────────────────────
@@ -36,13 +36,13 @@ import tidyAnim    from "@/assets/clorb_animations/cleaning-table.GIF";
 import trashAnim   from "@/assets/clorb_animations/taking-out-trash.GIF";
 
 export const TASK_ANIMATIONS: Record<string, string | null> = {
-  laundry:  laundryAnim,
-  dishes:   dishesAnim,
-  tidying:  tidyAnim,
-  cooking:  null,
-  working:  null,
-  studying: null,
-  errands:  trashAnim,
+  laundry: laundryAnim,
+  emails:  null,
+  bed:     null,
+  dishes:  dishesAnim,
+  sweep:   tidyAnim,
+  trash:   trashAnim,
+  misc:    null,
 };
 
 // ─── Collectible Asset Mapping ─────────────────────────────────────────────────
@@ -87,6 +87,22 @@ export const TASK_SPEECH_LINES: Record<string, string[]> = {
     "this sock is from a different era",
     "the dryer is my best friend rn",
   ],
+  emails: [
+    "the emails are multiplying",
+    "one task. just one. that's all.",
+    "in the zone. do not disturb.",
+    "somehow the inbox grew",
+    "this tab has been open for 9 days",
+    "unsubscribe. unsubscribe. unsubscribe.",
+  ],
+  bed: [
+    "it took two minutes. two. minutes.",
+    "hospital corners? no. flat? yes.",
+    "this is the most adult thing i've done",
+    "the pillow placement is an art form",
+    "duvet is on. we are thriving.",
+    "future me will appreciate this. probably.",
+  ],
   dishes: [
     "this is my villain origin story",
     "i found a fork from 2019 in here",
@@ -95,45 +111,29 @@ export const TASK_SPEECH_LINES: Record<string, string[]> = {
     "the sponge has been through it",
     "there is no logical explanation for this pot",
   ],
-  tidying: [
+  sweep: [
     "found three things i thought i lost",
     "the floor EXISTS. i forgot.",
     "shoved half of it in a drawer, moving on",
     "organizing is just shuffling the chaos",
     "this is definitely a pile not a system",
-    "vacuumed UNDER the couch. hero behavior.",
+    "swept UNDER the couch. hero behavior.",
   ],
-  cooking: [
-    "mise en place except i have none",
-    "it's... probably edible",
-    "gordon ramsay would NOT like this",
-    "counting this as a creative project",
-    "one pot. that is all. respect.",
-    "it smells fine which means it IS fine",
+  trash: [
+    "the bag is not light",
+    "found three bags inside the bag",
+    "made it to the bin on the first try",
+    "the journey down the hall was long",
+    "new bag in. we are reset.",
+    "why is it always heavier than expected",
   ],
-  working: [
-    "the emails are multiplying",
-    "one task. just one. that's all.",
-    "in the zone. do not disturb.",
-    "somehow the inbox grew",
-    "this tab has been open for 9 days",
-    "focused. mostly. (20% focused.)",
-  ],
-  studying: [
-    "if i highlight it, i know it",
-    "on my fourth cup of something",
-    "flashcards go brrr",
-    "definitely absorbing this information",
-    "reread that sentence six times still lost",
-    "pomodoro timer said go and i said okay",
-  ],
-  errands: [
-    "the outside world is a lot",
-    "found parking in under 10 mins!!!",
-    "the list had more items than expected",
-    "almost back. almost.",
-    "the grocery store was a journey",
-    "i did ALL of them. on foot. respect me.",
+  misc: [
+    "misc chore hours. we move.",
+    "unclear what this is. doing it anyway.",
+    "this counts. i'm counting it.",
+    "the task is vague but the effort is real",
+    "adulting: unlocked.",
+    "checked it off. that's what matters.",
   ],
 };
 

@@ -6,6 +6,10 @@ A gamified, virtual body-doubling application designed to reduce friction and ex
 
 Clorb combines cozy, low-fi web aesthetics with slightly threatening, absurd gamification to help you complete tasks through virtual companionship.
 
+## Unity
+
+Unity App was made alongside for demoing: https://github.com/chowwil/CLORB-Unity
+
 ## Core Features
 
 ### 🎮 Virtual Body Doubling
