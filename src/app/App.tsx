@@ -1,11 +1,6 @@
-import { RouterProvider } from 'react-router';
-import { router } from './routes';
-import { MobileContainer } from './components/MobileContainer';
+import { RouterProvider } from "react-router";
+import { router } from "./routes";
 
 export default function App() {
-  return (
-    <MobileContainer>
-      <RouterProvider router={router} />
-    </MobileContainer>
-  );
+  return <RouterProvider router={router} />;
 }

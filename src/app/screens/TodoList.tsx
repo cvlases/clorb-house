@@ -1,276 +1,217 @@
 import { useNavigate } from "react-router";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, useMotionValue, animate } from "motion/react";
 import { useState } from "react";
 import imgBackground from "../../imports/IPhone165/8ed2eefc22017c6fe97892a6d10d9c37e1f82d6d.png";
 import imgClorb from "../../imports/IPhone165/749af56786e9c6161adfcf899904dec36b1941a5.png";
-import svgPaths from "../../imports/IPhone165/svg-kfaj6v6rpn";
 import { TASKS, TASK_CATEGORIES } from "../constants/tasks";
 import { TASK_ICONS, TASK_TAGLINES } from "../constants/taskConfig";
-import { getGuiltLevel, getHoursSinceLastChore } from "../hooks/useGameState";
+import { getGuiltLevel } from "../hooks/useGameState";
+import { TopNav } from "../components/TopNav";
 
 type Category = (typeof TASK_CATEGORIES)[number];
+type PanInfo = { velocity: { y: number }; offset: { y: number } };
 
-const guiltConfig = [
-  {
-    copy: "You've been keeping up. The dust bunnies fear you.",
-    clorbAnimation: { rotate: [0, 10, -10, 0] } as const,
-    overlay: "rgba(0,0,0,0)",
-  },
-  {
-    copy: "It's getting a little chaotic in here. Care to help a blob out?",
-    clorbAnimation: { x: [-4, 4, -4] } as const,
-    overlay: "rgba(255, 200, 0, 0.10)",
-  },
-  {
-    copy: "I have named the dust bunnies. We need an intervention.",
-    clorbAnimation: { y: [0, -6, 0] } as const,
-    overlay: "rgba(0, 180, 0, 0.15)",
-  },
+// ── Sheet geometry (portrait: 390 × 844) ─────────────────────────────────────
+const SHEET_HEIGHT    = 660;
+const COLLAPSED_VIS   = 148;
+const COLLAPSE_Y      = SHEET_HEIGHT - COLLAPSED_VIS; // 512 — resting position
+const EXPAND_Y        = 0;
+
+const CLORB_ANIMS = [
+  { rotate: [0, 10, -10, 0] as number[] },
+  { x: [-4, 4, -4] as number[] },
+  { y: [0, -6, 0] as number[] },
 ];
+const ROOM_FILTERS = ["none", "saturate(0.7)", "hue-rotate(80deg) saturate(1.3)"];
 
 export default function TodoList() {
   const navigate = useNavigate();
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const guiltLevel  = getGuiltLevel();
+  const sheetY      = useMotionValue(COLLAPSE_Y);
   const [activeCategory, setActiveCategory] = useState<Category>("frequent");
 
-  const guiltLevel = getGuiltLevel();
-  const hoursSince = getHoursSinceLastChore();
-  const guilt = guiltConfig[guiltLevel];
+  const snap = (to: number) =>
+    animate(sheetY, to, { type: "spring", damping: 32, stiffness: 280 });
+
+  const handleDragEnd = (_: unknown, info: PanInfo) => {
+    const shouldCollapse = info.velocity.y > 300 || (info.velocity.y >= 0 && info.offset.y > 60);
+    snap(shouldCollapse ? COLLAPSE_Y : EXPAND_Y);
+  };
 
   const filteredTasks = TASKS.filter(
     (t) => activeCategory === "frequent" || t.category === activeCategory
   );
 
-  const daysSinceText = () => {
-    if (hoursSince === Infinity) return null;
-    if (hoursSince < 1) return "last chore: less than an hour ago";
-    if (hoursSince < 24) return `last chore: ${Math.floor(hoursSince)}h ago`;
-    const days = Math.floor(hoursSince / 24);
-    return `last chore: ${days} day${days !== 1 ? "s" : ""} ago`;
-  };
-
-  const handleJoin = (taskId: string) => {
-    setSheetOpen(false);
-    navigate(`/time-select/${taskId}`);
-  };
-
   return (
-    <div className="bg-[#fff85a] relative size-full overflow-hidden">
+    <div className="relative size-full overflow-hidden bg-[#fff85a]">
       {/* Room background */}
-      <div className="absolute h-[706px] left-[-1px] top-[-37px] w-[394px]">
-        <img
-          alt=""
-          className="absolute inset-0 max-w-none object-cover pointer-events-none size-full"
-          src={imgBackground}
-          style={{
-            filter:
-              guiltLevel === 2
-                ? "hue-rotate(80deg) saturate(1.3)"
-                : guiltLevel === 1
-                ? "saturate(0.7)"
-                : "none",
-          }}
-        />
-      </div>
-
-      {/* Guilt overlay */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{ backgroundColor: guilt.overlay }}
+      <img
+        alt=""
+        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+        src={imgBackground}
+        style={{ filter: ROOM_FILTERS[guiltLevel] }}
       />
 
       {/* Clorb */}
       <motion.div
-        className="absolute left-[176px] size-[102px] top-[483px]"
-        animate={guilt.clorbAnimation}
+        className="absolute size-[102px]"
+        style={{ left: 176, top: 420 }}
+        animate={CLORB_ANIMS[guiltLevel]}
         transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
       >
-        <img
-          alt="Clorb"
-          className="absolute inset-0 max-w-none object-cover pointer-events-none size-full"
-          src={imgClorb}
-        />
+        <img alt="Clorb" src={imgClorb} className="w-full h-full object-contain pointer-events-none" />
       </motion.div>
 
-      {/* Guilt copy */}
+      <TopNav active="clorbhouse" />
+
+      {/* Backdrop: tap to collapse */}
       <motion.div
-        className="absolute left-1/2 -translate-x-1/2 top-[88px] w-[300px]"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
-      >
-        <p className="font-['Work_Sans:Medium',sans-serif] text-[13px] text-black text-center leading-[1.5]">
-          "{guilt.copy}"
-        </p>
-        {daysSinceText() && (
-          <p className="font-['Work_Sans:Regular',sans-serif] text-[11px] text-black/50 text-center mt-[4px]">
-            {daysSinceText()}
-          </p>
-        )}
-      </motion.div>
-
-      {/* Bottom panel — tap to open the task sheet */}
+        className="absolute inset-0"
+        style={{ backgroundColor: "rgba(0,0,0,0.35)", pointerEvents: "none" }}
+        animate={{ opacity: sheetY.get() < COLLAPSE_Y - 30 ? 1 : 0 }}
+      />
       <div
-        className="-translate-x-1/2 absolute left-1/2 bottom-0 bg-white border-black border-solid border-t-4 rounded-tl-[24px] rounded-tr-[24px] w-[393px] h-[100px] cursor-pointer"
-        onClick={() => setSheetOpen(true)}
+        className="absolute inset-0"
+        style={{ pointerEvents: "none" }}
+        onPointerDown={() => {
+          if (sheetY.get() < COLLAPSE_Y - 30) snap(COLLAPSE_Y);
+        }}
+      />
+
+      {/* ── Bottom sheet ─────────────────────────────────────────────────── */}
+      <motion.div
+        className="absolute left-0 right-0 bg-[#fefdf8] border-t-[3px] border-black"
+        style={{
+          bottom: 0,
+          height: SHEET_HEIGHT,
+          y: sheetY,
+          borderRadius: "24px 24px 0 0",
+          boxShadow: "0 -4px 24px rgba(0,0,0,0.12)",
+          zIndex: 10,
+        }}
+        drag="y"
+        dragConstraints={{ top: EXPAND_Y, bottom: COLLAPSE_Y }}
+        dragElastic={0.07}
+        onDragEnd={handleDragEnd}
       >
-        {/* Pull indicator */}
-        <div className="absolute top-[12px] left-1/2 -translate-x-1/2 w-[40px] h-[5px] rounded-full bg-black/20" />
-
-        <p className="-translate-x-1/2 absolute font-['Work_Sans:SemiBold',sans-serif] font-semibold text-[20px] text-black text-center top-[30px] left-1/2 whitespace-nowrap">
-          Start a Task
-        </p>
-
-        <div className="absolute bottom-[14px] left-1/2 -translate-x-1/2">
-          <div className="absolute bottom-1/4 left-[16.34%] right-[16.34%] top-[8.06%]">
-            <svg
-              className="block size-full"
-              fill="none"
-              preserveAspectRatio="none"
-              viewBox="0 0 14.281 10.7099"
-              style={{ width: 14, height: 11 }}
-            >
-              <path
-                d={svgPaths.p19d7bc80}
-                fill="var(--fill-0, #020202)"
-              />
-            </svg>
-          </div>
+        {/* Drag handle — tap to toggle */}
+        <div
+          className="flex justify-center items-center pt-[10px] pb-[4px] cursor-pointer"
+          onClick={() => snap(sheetY.get() > COLLAPSE_Y / 2 ? EXPAND_Y : COLLAPSE_Y)}
+        >
+          <div className="w-[36px] h-[5px] rounded-full bg-black/25" />
         </div>
-      </div>
 
-      {/* Top nav */}
-      <div className="-translate-x-1/2 absolute bg-black flex gap-[4px] items-center left-[calc(50%+0.5px)] pl-px pr-[8px] py-px rounded-[20px] top-[19px] w-[220px]">
-        <div className="bg-[#42aaff] flex items-center justify-center p-[8px] relative rounded-[18px] shrink-0 w-[100px]">
-          <p className="font-['Work_Sans:Medium',sans-serif] font-medium leading-[16px] text-[12px] text-black text-center whitespace-nowrap">
-            Clorbhouse
+        {/* Title */}
+        <div className="px-[20px] pt-[2px] pb-[8px]">
+          <p style={{ fontFamily: "'Kodchasan', sans-serif", fontWeight: 700, fontSize: 22, color: "black" }}>
+            To Do List
           </p>
         </div>
-        <button
-          onClick={() => navigate("/shelf")}
-          className="font-['Work_Sans:Medium',sans-serif] font-medium leading-[16px] text-[11px] text-center text-white flex-1 cursor-pointer whitespace-nowrap"
-        >
-          Clorb's Collections
-        </button>
-      </div>
 
-      {/* ── Task Menu Bottom Sheet ─────────────────────────────────── */}
-      <AnimatePresence>
-        {sheetOpen && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              className="absolute inset-0 bg-black/40 z-20"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setSheetOpen(false)}
-            />
-
-            {/* Sheet */}
-            <motion.div
-              className="absolute bottom-0 left-0 right-0 bg-[#fefdf8] border-t-4 border-black rounded-tl-[24px] rounded-tr-[24px] z-30 overflow-hidden"
-              style={{ maxHeight: "82%" }}
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 28, stiffness: 320 }}
+        {/* ── Shortcut icons (visible in collapsed state) ─────────────── */}
+        <div className="flex justify-around px-[10px] pb-[12px]">
+          {TASKS.slice(0, 5).map((task) => (
+            <motion.button
+              key={task.id}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={() => navigate(`/time-select/${task.id}`)}
+              className="flex flex-col items-center gap-[5px] cursor-pointer"
+              whileTap={{ scale: 0.88 }}
             >
-              {/* Handle */}
-              <div className="flex justify-center pt-[12px] pb-[4px]">
-                <div className="w-[40px] h-[5px] rounded-full bg-black/20" />
+              <div
+                className="size-[52px] rounded-full border-[2.5px] border-black flex items-center justify-center overflow-hidden shadow-[2px_2px_0_0_#000]"
+                style={{ backgroundColor: task.color }}
+              >
+                {TASK_ICONS[task.id] ? (
+                  <img src={TASK_ICONS[task.id]} alt={task.name} className="w-[34px] h-[34px] object-contain" />
+                ) : (
+                  <span className="text-[22px]">{task.emoji}</span>
+                )}
+              </div>
+              <p style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 9, width: 54, textAlign: "center", lineHeight: "12px", color: "black" }}>
+                {task.name}
+              </p>
+            </motion.button>
+          ))}
+        </div>
+
+        {/* Divider */}
+        <div className="h-[2px] bg-black/10" />
+
+        {/* Category tabs */}
+        <div className="flex gap-[8px] px-[16px] py-[10px] overflow-x-auto">
+          {TASK_CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={() => setActiveCategory(cat)}
+              className="shrink-0 px-[14px] py-[6px] rounded-[16px] border-[2px] border-black text-[12px] whitespace-nowrap cursor-pointer"
+              style={{
+                fontFamily: "'Work Sans', sans-serif",
+                fontWeight: 600,
+                backgroundColor: activeCategory === cat ? "#beff6c" : "white",
+              }}
+            >
+              {cat.charAt(0).toUpperCase() + cat.slice(1)}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Full task rows ─────────────────────────────────────────── */}
+        <div className="overflow-y-auto" style={{ height: SHEET_HEIGHT - 224 }}>
+          {filteredTasks.map((task, idx) => (
+            <div
+              key={task.id}
+              className="flex items-center gap-[12px] px-[16px] py-[12px] border-b border-black/8"
+              style={{ backgroundColor: idx % 2 === 0 ? "white" : "#fefdf8" }}
+            >
+              {/* Icon */}
+              <div
+                className="size-[50px] rounded-full border-[2px] border-black flex items-center justify-center shrink-0 overflow-hidden shadow-[2px_2px_0_0_#000]"
+                style={{ backgroundColor: task.color }}
+              >
+                {TASK_ICONS[task.id] ? (
+                  <img src={TASK_ICONS[task.id]} alt={task.name} className="w-[34px] h-[34px] object-contain" />
+                ) : (
+                  <span className="text-[22px]">{task.emoji}</span>
+                )}
               </div>
 
-              {/* Header */}
-              <div className="px-[20px] pt-[4px] pb-[12px] border-b-2 border-black">
-                <p className="font-['Work_Sans:Bold',sans-serif] font-bold text-[22px] text-black">
-                  To Do List
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <div className="mb-[4px]">
+                  <span style={{ backgroundColor: "#beff6c", border: "1.5px solid black", borderRadius: 8, padding: "2px 8px", fontFamily: "'Work Sans', sans-serif", fontWeight: 700, fontSize: 11, color: "black", display: "inline-block", whiteSpace: "nowrap" }}>
+                    {task.clorbCount.toLocaleString()} Clorbs
+                  </span>
+                </div>
+                <p style={{ fontFamily: "'Kodchasan', sans-serif", fontWeight: 700, fontSize: 14, lineHeight: 1.2, color: "black", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {task.name}
+                </p>
+                <p style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 11, color: "rgba(0,0,0,0.5)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {TASK_TAGLINES[task.id] ?? ""}
                 </p>
               </div>
 
-              {/* Category tabs */}
-              <div className="flex gap-[8px] px-[16px] py-[10px] border-b border-black/10 overflow-x-auto">
-                {TASK_CATEGORIES.map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setActiveCategory(cat)}
-                    className="px-[14px] py-[6px] rounded-[16px] border-2 border-black font-['Work_Sans:SemiBold',sans-serif] font-semibold text-[12px] whitespace-nowrap cursor-pointer shrink-0 transition-colors"
-                    style={{
-                      backgroundColor: activeCategory === cat ? "#beff6c" : "white",
-                    }}
-                  >
-                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                  </button>
-                ))}
-              </div>
-
-              {/* Task list */}
-              <div className="overflow-y-auto" style={{ maxHeight: "calc(82vh - 160px)" }}>
-                {filteredTasks.length === 0 ? (
-                  <div className="px-[20px] py-[32px] text-center">
-                    <p className="font-['Work_Sans:Medium',sans-serif] text-[14px] text-black/50">
-                      No tasks in this category yet.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col">
-                    {filteredTasks.map((task, idx) => (
-                      <motion.div
-                        key={task.id}
-                        className="flex items-center gap-[12px] px-[16px] py-[14px] border-b border-black/8"
-                        style={{ backgroundColor: idx % 2 === 0 ? "white" : "#fefdf8" }}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: idx * 0.04 }}
-                      >
-                        {/* Task icon */}
-                        <div
-                          className="size-[52px] rounded-full border-2 border-black flex items-center justify-center shrink-0 overflow-hidden shadow-[2px_2px_0_0_#000]"
-                          style={{ backgroundColor: task.color }}
-                        >
-                          {TASK_ICONS[task.id] ? (
-                            <img
-                              src={TASK_ICONS[task.id]}
-                              alt={task.name}
-                              className="w-[36px] h-[36px] object-contain"
-                            />
-                          ) : (
-                            <span className="text-[24px]">{task.emoji}</span>
-                          )}
-                        </div>
-
-                        {/* Task info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-[6px] mb-[1px]">
-                            <span className="font-['Work_Sans:Regular',sans-serif] text-[11px] text-black/50">
-                              ↑ {task.clorbCount.toLocaleString()} Clorbs Now
-                            </span>
-                          </div>
-                          <p className="font-['Work_Sans:Bold',sans-serif] font-bold text-[16px] text-black leading-[1.2] truncate">
-                            {task.name}
-                          </p>
-                          <p className="font-['Work_Sans:Regular',sans-serif] text-[12px] text-black/60 leading-[1.3] truncate">
-                            {TASK_TAGLINES[task.id] ?? ""}
-                          </p>
-                        </div>
-
-                        {/* Join button */}
-                        <motion.button
-                          onClick={() => handleJoin(task.id)}
-                          className="bg-[#fff85a] border-2 border-black rounded-[16px] px-[14px] py-[8px] font-['Work_Sans:Bold',sans-serif] font-bold text-[13px] text-black shrink-0 cursor-pointer shadow-[2px_2px_0_0_#000] hover:shadow-[3px_3px_0_0_#000] transition-all"
-                          whileTap={{ scale: 0.93 }}
-                        >
-                          Join
-                        </motion.button>
-                      </motion.div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+              {/* Join */}
+              <motion.button
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => navigate(`/time-select/${task.id}`)}
+                className="shrink-0 border-[2px] border-black rounded-[14px] px-[14px] py-[8px] shadow-[2px_2px_0_0_#000] cursor-pointer"
+                style={{ backgroundColor: "#fff85a", fontFamily: "'Work Sans', sans-serif", fontWeight: 700, fontSize: 13, color: "black" }}
+                whileTap={{ scale: 0.92 }}
+              >
+                Join
+              </motion.button>
+            </div>
+          ))}
+          {filteredTasks.length === 0 && (
+            <p className="text-center py-[24px]" style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 14, color: "rgba(0,0,0,0.4)" }}>
+              No tasks in this category yet.
+            </p>
+          )}
+        </div>
+      </motion.div>
     </div>
   );
 }

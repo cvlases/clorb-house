@@ -2,38 +2,36 @@
 @import './tailwind.css';
 @import './theme.css';
 
-/* Mobile App Container */
-html, body, #root {
+/* ─── Global font application ────────────────────────────────────────────── */
+/* Kodchasan → titles, headers, display text                                 */
+/* Work Sans → body, labels, buttons, captions                               */
+
+html, body {
   margin: 0;
   padding: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
+  font-family: 'Work Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Kodchasan', sans-serif;
+}
+
+/* ─── Root: centered purple backdrop for desktop preview ─────────────────── */
 #root {
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  overflow: hidden;
 }
 
-/* Mobile viewport */
-@media (min-width: 768px) {
-  #root > div {
-    max-width: 393px;
-    max-height: 852px;
-    width: 393px;
-    height: 852px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    border-radius: 24px;
-    overflow: hidden;
-  }
-}
-
+/* On mobile, root fills the screen */
 @media (max-width: 767px) {
-  #root > div {
-    width: 100vw;
-    height: 100vh;
+  html, body, #root {
+    height: 100dvh;
+    overflow: hidden;
   }
 }

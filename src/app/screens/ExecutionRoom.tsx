@@ -4,61 +4,64 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Check, X } from "lucide-react";
 import imgClorb from "../../imports/IPhone1612/749af56786e9c6161adfcf899904dec36b1941a5.png";
 import { CLORB_MESSAGES, getTaskById } from "../constants/tasks";
-import { TASK_ANIMATIONS, CLORB_SPEECH_LINES } from "../constants/taskConfig";
+import { TASK_ANIMATIONS, getSpeechLine, VIGIL_COPY } from "../constants/taskConfig";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-/** Shape of each clorb present in the room.
- * Replace `mockRoomClorbs` with live data when backend is ready —
- * the rendering logic only reads this array. */
 interface RoomClorb {
   id: string;
   taskId: string;
   /** Percent of room width (0–100) */
   xPct: number;
-  /** Percent of room height (0–100) */
+  /** Percent of room height  (0–100) */
   yPct: number;
-  speechLine: string;
   animationDelay: number;
 }
 
+/**
+ * Vigil sequence steps:
+ * 0 = not started
+ * 1 = user clorb falls sideways
+ * 2 = surrounding clorbs move into circle
+ * 3 = gravestone rises
+ * 4 = stillness + overlay text
+ */
 type Phase = "active" | "give-up-confirm" | "vigil" | "complete";
 
-// ─── Mock room population ─────────────────────────────────────────────────────
-
+// ─── Mock room data ────────────────────────────────────────────────────────────
+// Replace `makeMockClorbs` with a backend fetch when ready.
 const ALL_TASK_IDS = ["laundry", "dishes", "tidying", "cooking", "working", "studying", "errands"];
 
-function makeMockClorbs(userTaskId: string): RoomClorb[] {
-  const positions = [
-    { xPct: 12, yPct: 38 },
-    { xPct: 24, yPct: 58 },
-    { xPct: 36, yPct: 35 },
-    { xPct: 48, yPct: 62 },
-    { xPct: 60, yPct: 40 },
-    { xPct: 72, yPct: 55 },
-    { xPct: 85, yPct: 32 },
-    { xPct: 18, yPct: 70 },
-    { xPct: 42, yPct: 75 },
-    { xPct: 65, yPct: 68 },
-  ];
+const ROOM_POSITIONS = [
+  { xPct: 10, yPct: 30 },
+  { xPct: 22, yPct: 55 },
+  { xPct: 35, yPct: 28 },
+  { xPct: 50, yPct: 58 },
+  { xPct: 63, yPct: 32 },
+  { xPct: 75, yPct: 50 },
+  { xPct: 87, yPct: 28 },
+  { xPct: 16, yPct: 68 },
+  { xPct: 42, yPct: 72 },
+  { xPct: 68, yPct: 65 },
+];
 
-  return positions.map((pos, i) => ({
+function makeMockClorbs(userTaskId: string): RoomClorb[] {
+  return ROOM_POSITIONS.map((pos, i) => ({
     id: `clorb-${i}`,
     taskId: i === 0 ? userTaskId : ALL_TASK_IDS[i % ALL_TASK_IDS.length],
     xPct: pos.xPct,
     yPct: pos.yPct,
-    speechLine: CLORB_SPEECH_LINES[i % CLORB_SPEECH_LINES.length],
-    animationDelay: i * 0.12,
+    animationDelay: i * 0.1,
   }));
 }
 
-// Positions for clorbs forming a vigil circle around center
-function getVigilPositions(count: number): { xPct: number; yPct: number }[] {
+// Vigil circle positions (centered around user clorb at ~50%, 50%)
+function getVigilPositions(count: number) {
   return Array.from({ length: count }, (_, i) => {
     const angle = (i / count) * 2 * Math.PI - Math.PI / 2;
     return {
-      xPct: 50 + Math.cos(angle) * 20,
-      yPct: 50 + Math.sin(angle) * 25,
+      xPct: 50 + Math.cos(angle) * 22,
+      yPct: 50 + Math.sin(angle) * 28,
     };
   });
 }
@@ -66,22 +69,23 @@ function getVigilPositions(count: number): { xPct: number; yPct: number }[] {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ExecutionRoom() {
-  const navigate = useNavigate();
-  const { task } = useParams<{ task: string }>();
+  const navigate   = useNavigate();
+  const { task }   = useParams<{ task: string }>();
   const [searchParams] = useSearchParams();
-  const duration = parseInt(searchParams.get("duration") || "30");
+  const duration   = parseInt(searchParams.get("duration") || "30");
 
   const currentTask = getTaskById(task);
-  const [roomClorbs] = useState<RoomClorb[]>(() => makeMockClorbs(currentTask.id));
-  const vigilPositions = useRef(getVigilPositions(roomClorbs.length));
+  const [roomClorbs]  = useState<RoomClorb[]>(() => makeMockClorbs(currentTask.id));
+  const vigilCircle   = useRef(getVigilPositions(roomClorbs.length));
 
-  const [phase, setPhase] = useState<Phase>("active");
-  const [timeLeft, setTimeLeft] = useState(duration * 60);
+  const [phase,       setPhase]      = useState<Phase>("active");
+  const [vigilStep,   setVigilStep]  = useState(0);
+  const [timeLeft,    setTimeLeft]   = useState(duration * 60);
   const [showMessage, setShowMessage] = useState(false);
   const [currentMessage, setCurrentMessage] = useState("");
-  const [hoveredClorb, setHoveredClorb] = useState<string | null>(null);
-  const [longPressTimer, setLongPressTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
-  const [addTimeFlash, setAddTimeFlash] = useState<number | null>(null);
+  const [hoveredClorb, setHoveredClorb]   = useState<string | null>(null);
+  const [hoveredMessage, setHoveredMessage] = useState("");
+  const [addTimeFlash, setAddTimeFlash]   = useState<number | null>(null);
 
   const timeLeftRef = useRef(timeLeft);
   timeLeftRef.current = timeLeft;
@@ -91,36 +95,27 @@ export default function ExecutionRoom() {
   // ── Orientation lock ──────────────────────────────────────────────────────
   useEffect(() => {
     if (screen?.orientation?.lock) {
-      screen.orientation.lock("landscape").catch(() => {
-        // Not supported on desktop — no-op
-      });
+      screen.orientation.lock("landscape").catch(() => {});
     }
-    return () => {
-      if (screen?.orientation?.unlock) {
-        screen.orientation.unlock();
-      }
-    };
+    return () => { if (screen?.orientation?.unlock) screen.orientation.unlock(); };
   }, []);
 
-  // ── App backgrounding detection ───────────────────────────────────────────
+  // ── Background → vigil ───────────────────────────────────────────────────
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden && phaseRef.current === "active") {
-        triggerVigil();
-      }
+    const onVisibility = () => {
+      if (document.hidden && phaseRef.current === "active") triggerVigil();
     };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
   }, []);
 
   // ── Timer ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (phase !== "active") return;
-
-    const timer = setInterval(() => {
+    const t = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          clearInterval(timer);
+          clearInterval(t);
           setPhase("complete");
           setTimeout(() => navigate("/reward"), 600);
           return 0;
@@ -128,11 +123,10 @@ export default function ExecutionRoom() {
         return prev - 1;
       });
     }, 1000);
-
-    return () => clearInterval(timer);
+    return () => clearInterval(t);
   }, [phase, navigate]);
 
-  // ── Idle messages ─────────────────────────────────────────────────────────
+  // ── Idle room messages ────────────────────────────────────────────────────
   useEffect(() => {
     if (phase !== "active") return;
     const t = setInterval(() => {
@@ -145,395 +139,324 @@ export default function ExecutionRoom() {
     return () => clearInterval(t);
   }, [phase]);
 
-  // ── Handlers ─────────────────────────────────────────────────────────────
+  // ── Vigil sequencer ────────────────────────────────────────────────────────
   const triggerVigil = useCallback(() => {
     setPhase("vigil");
     setHoveredClorb(null);
-    // Navigate to Clorbhouse after vigil plays out
-    setTimeout(() => navigate("/todo"), 4200);
+    setVigilStep(1);                               // (1) user clorb drifts to center
+    setTimeout(() => setVigilStep(2), 2000);       // (2) surrounding clorbs form circle
+    setTimeout(() => setVigilStep(3), 3800);       // (3) gravestone rises + user clorb vanishes
+    setTimeout(() => setVigilStep(4), 6000);       // (4) dark overlay + text
+    setTimeout(() => navigate("/todo"), 11000);    // (5) navigate
   }, [navigate]);
-
-  const handleAddTime = (mins: number) => {
-    setTimeLeft((prev) => prev + mins * 60);
-    setAddTimeFlash(mins);
-    setTimeout(() => setAddTimeFlash(null), 1200);
-  };
-
-  const handleFinish = () => {
-    setPhase("complete");
-    setTimeout(() => navigate("/reward"), 600);
-  };
-
-  const handleConfirmGiveUp = () => {
-    triggerVigil();
-  };
-
-  // Long-press speech bubble for mobile
-  const handleTouchStart = (clorbId: string) => {
-    const t = setTimeout(() => setHoveredClorb(clorbId), 350);
-    setLongPressTimer(t);
-  };
-  const handleTouchEnd = () => {
-    if (longPressTimer) clearTimeout(longPressTimer);
-    setTimeout(() => setHoveredClorb(null), 2000);
-  };
 
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
-  const totalSeconds = duration * 60;
-  const progressPct = Math.max(0, (1 - timeLeft / totalSeconds) * 100);
+  const progressPct = Math.max(0, (1 - timeLeft / (duration * 60)) * 100);
 
+  // ─────────────────────────────────────────────────────────────────────────
   return (
     <div
-      className="fixed inset-0 overflow-hidden"
-      style={{ backgroundColor: "#d4e8ff", zIndex: 100 }}
+      className="relative size-full overflow-hidden"
+      style={{ backgroundColor: "#c8dcf8" }}
       onClick={() => hoveredClorb && setHoveredClorb(null)}
     >
       {/* ── Room background ────────────────────────────────────────────── */}
+      <div className="absolute inset-0" style={{ background: "linear-gradient(160deg, #d4e8ff 0%, #b8d0f0 100%)" }} />
       {/* Floor */}
-      <div
-        className="absolute bottom-0 left-0 right-0 h-[28%]"
-        style={{ background: "linear-gradient(to top, #b8d4f8, #c9e0ff)" }}
-      />
-      {/* Wall top */}
-      <div
-        className="absolute top-0 left-0 right-0 h-[72%]"
-        style={{ background: "linear-gradient(160deg, #d4e8ff 0%, #c4dcff 100%)" }}
-      />
-      {/* Floor line */}
-      <div className="absolute bottom-[28%] left-0 right-0 h-[3px] bg-[#9ab8e0]/50" />
+      <div className="absolute bottom-0 left-0 right-0 h-[28%]" style={{ background: "linear-gradient(to top, #b0c8e8, #c4dcf8)" }} />
+      <div className="absolute left-0 right-0 h-[2px]" style={{ bottom: "28%", backgroundColor: "rgba(100,140,200,0.4)" }} />
 
-      {/* Simple room detail: washing machine (for laundry rooms) */}
-      <div className="absolute top-[8%] left-[3%] opacity-30">
-        <div className="w-[60px] h-[64px] bg-white/60 rounded-[8px] border-2 border-[#9ab8e0]">
-          <div className="w-[40px] h-[40px] rounded-full border-2 border-[#9ab8e0] m-auto mt-[10px]" />
-        </div>
+      {/* ── Progress bar ──────────────────────────────────────────────── */}
+      <div className="absolute top-0 left-0 right-0 h-[3px] bg-black/10">
+        <div className="h-full bg-[#beff6c] transition-all duration-1000" style={{ width: `${progressPct}%` }} />
       </div>
 
-      {/* ── Top-right nav ──────────────────────────────────────────────── */}
-      <div className="absolute top-[12px] right-[16px] flex gap-[6px] z-10">
-        <div className="bg-[#beff6c] border-2 border-black rounded-[14px] px-[12px] py-[5px]">
-          <p className="font-['Work_Sans:Medium',sans-serif] text-[11px] text-black font-medium">
-            {currentTask.name}
-          </p>
-        </div>
-        <button
-          onClick={() => navigate("/todo")}
-          className="bg-white border-2 border-black rounded-[14px] px-[12px] py-[5px] cursor-pointer"
-        >
-          <p className="font-['Work_Sans:Medium',sans-serif] text-[11px] text-black font-medium">
-            Clorbhouse
-          </p>
-        </button>
+      {/* ── Timer — large, right side ──────────────────────────────────── */}
+      <div
+        className="absolute flex flex-col gap-[6px]"
+        style={{ right: 18, top: "50%", transform: "translateY(-50%)", zIndex: 10 }}
+      >
+        {[
+          { value: String(minutes).padStart(2, "0"), label: "MIN" },
+          { value: String(seconds).padStart(2, "0"), label: "SEC" },
+        ].map(({ value, label }) => (
+          <div
+            key={label}
+            style={{
+              width: 110,
+              height: 86,
+              backgroundColor: "white",
+              border: "3px solid black",
+              borderRadius: 16,
+              boxShadow: "4px 4px 0 0 black",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <span style={{ fontFamily: "'Kodchasan', sans-serif", fontWeight: 700, fontSize: 54, lineHeight: 1, color: "black", fontVariantNumeric: "tabular-nums" }}>
+              {value}
+            </span>
+            <span style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 9, color: "rgba(0,0,0,0.45)", letterSpacing: "0.14em", textTransform: "uppercase", marginTop: 2 }}>
+              {label}
+            </span>
+          </div>
+        ))}
       </div>
 
-      {/* ── Clorbs in room ─────────────────────────────────────────────── */}
+      {/* ── Clorb characters ──────────────────────────────────────────── */}
       {roomClorbs.map((clorb, idx) => {
-        const isUserClorb = idx === 0;
-        const animSrc = TASK_ANIMATIONS[clorb.taskId] ?? imgClorb;
-        const vigilPos = vigilPositions.current[idx];
-        const isVigil = phase === "vigil";
-        const isHovered = hoveredClorb === clorb.id;
+        const isUser     = idx === 0;
+        const isVigil    = phase === "vigil";
+        const animSrc    = TASK_ANIMATIONS[clorb.taskId] ?? imgClorb;
+        const vPos       = vigilCircle.current[idx];
+        const isHovered  = hoveredClorb === clorb.id;
+
+        // User clorb: move to center at step 1, disappear at step 3
+        // Surrounding clorbs: move to circle only at step 2+
+        const isMovingToCenter  = isUser  && isVigil && vigilStep >= 1;
+        const isMovingToCircle  = !isUser && isVigil && vigilStep >= 2;
+        const targetLeft  = isMovingToCenter ? "50%" : (isMovingToCircle ? `${vPos.xPct}%` : `${clorb.xPct}%`);
+        const targetTop   = isMovingToCenter ? "46%" : (isMovingToCircle ? `${vPos.yPct}%` : `${clorb.yPct}%`);
+        const targetOpacity = isUser && isVigil && vigilStep >= 3 ? 0 : 1;
 
         return (
           <motion.div
             key={clorb.id}
             className="absolute cursor-pointer"
-            style={{
-              left: `${isVigil ? vigilPos.xPct : clorb.xPct}%`,
-              top: `${isVigil ? vigilPos.yPct : clorb.yPct}%`,
-              zIndex: isUserClorb ? 5 : 3,
+            style={{ translateX: "-50%", translateY: "-50%", zIndex: isUser ? 5 : 3 }}
+            animate={{
+              left: targetLeft,
+              top: targetTop,
+              opacity: targetOpacity,
             }}
-            animate={
-              isVigil
-                ? {
-                    left: `${vigilPos.xPct}%`,
-                    top: `${vigilPos.yPct}%`,
-                    rotate: isUserClorb ? 90 : 0,
-                    scale: isUserClorb ? 1.1 : 0.9,
-                  }
-                : {
-                    y: [0, -6, 0],
-                    rotate: [0, idx % 2 === 0 ? 4 : -4, 0],
-                  }
-            }
             transition={
               isVigil
-                ? { duration: 0.8, type: "spring", damping: 16, delay: isUserClorb ? 0 : 0.3 + idx * 0.08 }
-                : {
-                    duration: 2.2 + (idx % 4) * 0.35,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                    delay: clorb.animationDelay,
-                  }
+                ? { duration: 0.9, type: "spring", damping: 18, delay: isUser ? 0 : 0.3 + idx * 0.06 }
+                : { duration: 0 } // instant — no ambient movement
             }
-            onMouseEnter={() => !isUserClorb && setHoveredClorb(clorb.id)}
+            onMouseEnter={() => {
+              if (!isUser && phase === "active") {
+                setHoveredClorb(clorb.id);
+                setHoveredMessage(getSpeechLine(clorb.taskId));
+              }
+            }}
             onMouseLeave={() => setHoveredClorb(null)}
-            onTouchStart={() => !isUserClorb && handleTouchStart(clorb.id)}
-            onTouchEnd={handleTouchEnd}
+            onTouchStart={() => {
+              if (!isUser && phase === "active") {
+                const t = setTimeout(() => {
+                  setHoveredClorb(clorb.id);
+                  setHoveredMessage(getSpeechLine(clorb.taskId));
+                }, 300);
+                return () => clearTimeout(t);
+              }
+            }}
           >
-            {/* Speech bubble */}
+            {/* Speech bubble — message locked on hover-enter, never cycles */}
             <AnimatePresence>
               {isHovered && (
                 <motion.div
-                  className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 z-20 pointer-events-none"
-                  initial={{ opacity: 0, y: 6, scale: 0.85 }}
+                  className="absolute pointer-events-none"
+                  style={{ bottom: "calc(100% + 8px)", left: "50%", translateX: "-50%", zIndex: 20, minWidth: 140, maxWidth: 180 }}
+                  initial={{ opacity: 0, y: 8, scale: 0.85 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.85 }}
-                  transition={{ duration: 0.18 }}
-                  style={{ minWidth: 140, maxWidth: 180 }}
+                  transition={{ duration: 0.16 }}
                 >
-                  <div
-                    className="bg-black rounded-[12px] px-[12px] py-[8px] relative"
-                    style={{ borderRadius: "12px 12px 12px 4px" }}
-                  >
-                    <p className="font-['Work_Sans:Bold',sans-serif] font-bold text-[12px] text-white text-center whitespace-normal leading-[1.4]">
-                      {clorb.speechLine}
+                  <div style={{ backgroundColor: "black", borderRadius: "12px 12px 12px 4px", padding: "8px 12px", position: "relative" }}>
+                    <p style={{ fontFamily: "'Work Sans', sans-serif", fontWeight: 700, fontSize: 12, color: "white", textAlign: "center", lineHeight: 1.4 }}>
+                      {hoveredMessage}
                     </p>
-                    {/* Bubble tail */}
-                    <div
-                      className="absolute -bottom-[7px] left-[12px] w-0 h-0"
-                      style={{
-                        borderLeft: "8px solid transparent",
-                        borderRight: "4px solid transparent",
-                        borderTop: "8px solid black",
-                      }}
-                    />
+                    {/* Tail */}
+                    <div style={{ position: "absolute", bottom: -7, left: 12, width: 0, height: 0, borderLeft: "8px solid transparent", borderRight: "4px solid transparent", borderTop: "8px solid black" }} />
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* Clorb image */}
+            {/* Clorb image — GIF provides all animation */}
             <img
               alt="Clorb"
-              className="object-contain pointer-events-none select-none"
-              style={{ width: isUserClorb ? 60 : 48, height: isUserClorb ? 60 : 48 }}
               src={animSrc}
+              draggable={false}
+              style={{ width: isUser ? 58 : 46, height: isUser ? 58 : 46, objectFit: "contain", display: "block", userSelect: "none" }}
             />
-            {isUserClorb && (
-              <div className="absolute -top-[14px] left-1/2 -translate-x-1/2 bg-[#beff6c] border border-black rounded-[6px] px-[4px] py-[1px]">
-                <p className="font-['Work_Sans:Bold',sans-serif] font-bold text-[8px] text-black whitespace-nowrap">
-                  you
-                </p>
+            {isUser && (
+              <div style={{ position: "absolute", top: -14, left: "50%", transform: "translateX(-50%)", backgroundColor: "#beff6c", border: "1px solid black", borderRadius: 5, padding: "1px 4px" }}>
+                <span style={{ fontFamily: "'Work Sans', sans-serif", fontWeight: 700, fontSize: 8, color: "black", whiteSpace: "nowrap" }}>you</span>
               </div>
             )}
           </motion.div>
         );
       })}
 
-      {/* ── Timer (landscape — two side-by-side boxes) ─────────────────── */}
-      <div className="absolute top-[12px] left-1/2 -translate-x-1/2 flex gap-[8px] z-10">
-        <div className="bg-white border-4 border-black rounded-[16px] w-[100px] h-[72px] flex flex-col items-center justify-center shadow-[4px_4px_0_0_#000]">
-          <p className="font-['Work_Sans:Bold',sans-serif] font-bold text-[40px] text-black leading-none tabular-nums">
-            {String(minutes).padStart(2, "0")}
-          </p>
-          <p className="font-['Work_Sans:Regular',sans-serif] text-[9px] text-black/60 uppercase tracking-widest">
-            Minutes
-          </p>
-        </div>
-        <div className="bg-white border-4 border-black rounded-[16px] w-[100px] h-[72px] flex flex-col items-center justify-center shadow-[4px_4px_0_0_#000]">
-          <p className="font-['Work_Sans:Bold',sans-serif] font-bold text-[40px] text-black leading-none tabular-nums">
-            {String(seconds).padStart(2, "0")}
-          </p>
-          <p className="font-['Work_Sans:Regular',sans-serif] text-[9px] text-black/60 uppercase tracking-widest">
-            Seconds
-          </p>
-        </div>
-      </div>
+      {/* ── Gravestone (vigil step ≥ 3) ─────────────────────────────── */}
+      <AnimatePresence>
+        {phase === "vigil" && vigilStep >= 3 && (
+          <motion.div
+            className="absolute"
+            style={{ left: "50%", bottom: "28%", translateX: "-50%", zIndex: 8 }}
+            initial={{ y: 60, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ type: "spring", damping: 20, stiffness: 140 }}
+          >
+            <svg width="56" height="72" viewBox="0 0 56 72" fill="none">
+              {/* Stone body */}
+              <rect x="8" y="34" width="40" height="34" rx="3" fill="#888" />
+              {/* Rounded arch top */}
+              <path d="M8 34 Q8 8 28 8 Q48 8 48 34Z" fill="#888" />
+              {/* Stone highlight */}
+              <rect x="8" y="34" width="40" height="34" rx="3" fill="url(#sg)" opacity="0.3" />
+              <defs>
+                <linearGradient id="sg" x1="8" y1="34" x2="48" y2="68" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stopColor="white" />
+                  <stop offset="100%" stopColor="transparent" />
+                </linearGradient>
+              </defs>
+              {/* Cross */}
+              <rect x="25" y="16" width="6" height="20" rx="1" fill="#aaa" />
+              <rect x="18" y="23" width="20" height="6" rx="1" fill="#aaa" />
+              {/* Inscriptions */}
+              <text x="28" y="50" textAnchor="middle" fill="white" fontSize="9" fontFamily="'Work Sans', sans-serif" fontWeight="700">{VIGIL_COPY.gravestoneTitle}</text>
+              <text x="28" y="61" textAnchor="middle" fill="white" fontSize="6.5" fontFamily="'Work Sans', sans-serif">{VIGIL_COPY.gravestoneSubtitle}</text>
+            </svg>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Progress bar (subtle) */}
-      <div className="absolute top-0 left-0 right-0 h-[4px] bg-black/10">
-        <div
-          className="h-full bg-[#beff6c] transition-all duration-1000"
-          style={{ width: `${progressPct}%` }}
-        />
-      </div>
+      {/* ── Idle message ─────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {showMessage && phase === "active" && (
+          <motion.div
+            className="absolute pointer-events-none"
+            style={{ top: "22%", left: "50%", translateX: "-50%", zIndex: 10 }}
+            initial={{ opacity: 0, y: 10, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+          >
+            <div style={{ backgroundColor: "white", border: "2px solid black", borderRadius: 14, padding: "10px 14px", maxWidth: 280, boxShadow: "4px 4px 0 0 black" }}>
+              <p style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 13, textAlign: "center", color: "black" }}>{currentMessage}</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Bottom HUD ────────────────────────────────────────────────── */}
-      <div className="absolute bottom-0 left-0 right-0 h-[17%] flex items-center justify-between px-[16px] z-10">
-        {/* Social proof */}
-        <div className="flex items-center gap-[6px]">
-          <motion.div
-            animate={{ scale: [1, 1.08, 1] }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className="w-[8px] h-[8px] rounded-full bg-[#beff6c] border border-black"
-          />
-          <p className="font-['Work_Sans:Medium',sans-serif] text-[12px] text-black">
-            <span className="font-bold">{currentTask.clorbCount}</span> Clorbs {currentTask.actionName}
-          </p>
-        </div>
+      {phase === "active" && (
+        <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between px-[14px]" style={{ height: "20%", zIndex: 10 }}>
+          {/* Social proof */}
+          <div className="flex items-center gap-[6px]">
+            <motion.div
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#beff6c", border: "1px solid black" }}
+            />
+            <p style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 12, color: "black" }}>
+              <strong>{currentTask.clorbCount}</strong> Clorbs {currentTask.actionName}
+            </p>
+          </div>
 
-        {/* Action buttons */}
-        <div className="flex gap-[8px] items-center">
-          {/* +5m */}
-          <motion.button
-            onClick={() => handleAddTime(5)}
-            className="w-[44px] h-[44px] rounded-full border-2 border-black flex items-center justify-center font-['Work_Sans:Bold',sans-serif] font-bold text-[11px] text-black shadow-[2px_2px_0_0_#000] cursor-pointer"
-            style={{ backgroundColor: "#d99bfe" }}
-            whileTap={{ scale: 0.88 }}
-          >
-            +5m
-          </motion.button>
-          {/* +10m */}
-          <motion.button
-            onClick={() => handleAddTime(10)}
-            className="w-[44px] h-[44px] rounded-full border-2 border-black flex items-center justify-center font-['Work_Sans:Bold',sans-serif] font-bold text-[11px] text-black shadow-[2px_2px_0_0_#000] cursor-pointer"
-            style={{ backgroundColor: "#6bc6ff" }}
-            whileTap={{ scale: 0.88 }}
-          >
-            +10m
-          </motion.button>
-          {/* Finish */}
-          <motion.button
-            onClick={handleFinish}
-            className="w-[44px] h-[44px] rounded-full border-2 border-black flex items-center justify-center shadow-[2px_2px_0_0_#000] cursor-pointer"
-            style={{ backgroundColor: "#beff6c" }}
-            whileTap={{ scale: 0.88 }}
-          >
-            <Check size={20} className="text-black" />
-          </motion.button>
-          {/* Give Up */}
-          <motion.button
-            onClick={() => setPhase("give-up-confirm")}
-            className="w-[44px] h-[44px] rounded-full border-2 border-black flex items-center justify-center shadow-[2px_2px_0_0_#000] cursor-pointer"
-            style={{ backgroundColor: "#ff576a" }}
-            whileTap={{ scale: 0.88 }}
-          >
-            <X size={20} className="text-black" />
-          </motion.button>
+          {/* Action buttons */}
+          <div className="flex gap-[8px] items-center">
+            {[
+              { label: "+5m",  bg: "#d99bfe", action: () => { setTimeLeft(p => p + 300); setAddTimeFlash(5); setTimeout(() => setAddTimeFlash(null), 1200); } },
+              { label: "+10m", bg: "#6bc6ff", action: () => { setTimeLeft(p => p + 600); setAddTimeFlash(10); setTimeout(() => setAddTimeFlash(null), 1200); } },
+              { icon: <Check size={18} />, bg: "#beff6c", action: () => { setPhase("complete"); setTimeout(() => navigate("/reward"), 600); } },
+              { icon: <X size={18} />,    bg: "#ff576a", action: () => setPhase("give-up-confirm") },
+            ].map((btn, i) => (
+              <motion.button
+                key={i}
+                onClick={btn.action}
+                style={{ width: 42, height: 42, borderRadius: "50%", border: "2px solid black", backgroundColor: btn.bg, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "2px 2px 0 0 black", cursor: "pointer", fontFamily: "'Work Sans', sans-serif", fontWeight: 700, fontSize: 11 }}
+                whileTap={{ scale: 0.88 }}
+              >
+                {btn.label ?? btn.icon}
+              </motion.button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* +Xm flash */}
       <AnimatePresence>
         {addTimeFlash !== null && (
           <motion.div
-            className="absolute bottom-[22%] right-[16px] bg-[#beff6c] border-2 border-black rounded-[10px] px-[12px] py-[4px] z-20 pointer-events-none"
+            style={{ position: "absolute", bottom: "22%", right: 14, zIndex: 20, pointerEvents: "none" }}
             initial={{ opacity: 0, y: 0 }}
-            animate={{ opacity: 1, y: -20 }}
+            animate={{ opacity: 1, y: -24 }}
             exit={{ opacity: 0 }}
           >
-            <p className="font-['Work_Sans:Bold',sans-serif] font-bold text-[14px] text-black">
-              +{addTimeFlash}m
-            </p>
+            <div style={{ backgroundColor: "#beff6c", border: "2px solid black", borderRadius: 10, padding: "4px 12px" }}>
+              <span style={{ fontFamily: "'Work Sans', sans-serif", fontWeight: 700, fontSize: 14, color: "black" }}>+{addTimeFlash}m</span>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Idle message bubble */}
-      <AnimatePresence>
-        {showMessage && (
-          <motion.div
-            className="absolute top-[22%] left-1/2 -translate-x-1/2 bg-white border-2 border-black rounded-[14px] px-[14px] py-[10px] max-w-[280px] shadow-[4px_4px_0_0_#000] z-10 pointer-events-none"
-            initial={{ opacity: 0, y: 10, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-          >
-            <p className="font-['Work_Sans:Medium',sans-serif] text-[13px] text-black text-center">
-              {currentMessage}
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── Give Up Confirmation (inline modal) ────────────────────────── */}
+      {/* ── Give Up confirmation ──────────────────────────────────────── */}
       <AnimatePresence>
         {phase === "give-up-confirm" && (
           <motion.div
-            className="absolute inset-0 bg-black/65 flex items-center justify-center z-40"
+            className="absolute inset-0 flex items-center justify-center"
+            style={{ backgroundColor: "rgba(0,0,0,0.65)", zIndex: 40 }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-[#fefdf8] border-4 border-black rounded-[24px] p-[28px] mx-[24px] max-w-[340px] w-full shadow-[8px_8px_0_0_#000]"
+              style={{ backgroundColor: "#fefdf8", border: "4px solid black", borderRadius: 24, padding: 28, width: 300, boxShadow: "8px 8px 0 0 black" }}
               initial={{ scale: 0.8, y: 30 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.8 }}
               transition={{ type: "spring", damping: 18 }}
             >
-              <p className="font-['Kodchasan:Bold',sans-serif] text-[24px] text-black text-center mb-[6px] tracking-[-0.48px]">
+              <p style={{ fontFamily: "'Kodchasan', sans-serif", fontWeight: 700, fontSize: 24, textAlign: "center", marginBottom: 6 }}>
                 Are you sure?
               </p>
-              <p className="font-['Work_Sans:Medium',sans-serif] text-[15px] text-black text-center mb-[20px]">
-                Clorb only had{" "}
-                <span className="font-bold">
-                  {minutes > 0 ? `${minutes}m ` : ""}
-                  {String(seconds).padStart(2, "0")}s
-                </span>{" "}
-                left...
+              <p style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 15, textAlign: "center", marginBottom: 20 }}>
+                Clorb only had <strong>{minutes > 0 ? `${minutes}m ` : ""}{String(seconds).padStart(2, "0")}s</strong> left...
               </p>
-              <img
-                alt="Sad Clorb"
-                src={imgClorb}
-                className="w-[80px] h-[80px] object-contain opacity-70 mx-auto mb-[20px]"
-              />
+              <img alt="Sad Clorb" src={imgClorb} style={{ width: 72, height: 72, objectFit: "contain", opacity: 0.7, display: "block", margin: "0 auto 20px" }} />
               <div className="flex gap-[10px]">
-                <motion.button
-                  onClick={() => setPhase("active")}
-                  className="flex-1 bg-[#beff6c] border-2 border-black rounded-[14px] py-[12px] cursor-pointer"
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <p className="font-['Work_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-black text-center">
-                    Keep Going
-                  </p>
-                </motion.button>
-                <motion.button
-                  onClick={handleConfirmGiveUp}
-                  className="flex-1 bg-[#ff576a] border-2 border-black rounded-[14px] py-[12px] cursor-pointer"
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <p className="font-['Work_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-black text-center">
-                    Give Up
-                  </p>
-                </motion.button>
+                <motion.button onClick={() => setPhase("active")} style={{ flex: 1, backgroundColor: "#beff6c", border: "2px solid black", borderRadius: 14, padding: "12px 0", cursor: "pointer", fontFamily: "'Work Sans', sans-serif", fontWeight: 600, fontSize: 14 }} whileTap={{ scale: 0.95 }}>Keep Going</motion.button>
+                <motion.button onClick={triggerVigil}             style={{ flex: 1, backgroundColor: "#ff576a", border: "2px solid black", borderRadius: 14, padding: "12px 0", cursor: "pointer", fontFamily: "'Work Sans', sans-serif", fontWeight: 600, fontSize: 14 }} whileTap={{ scale: 0.95 }}>Give Up</motion.button>
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ── Vigil overlay ────────────────────────────────────────────────── */}
+      {/* ── Vigil overlay (step 4: stillness + text) ─────────────────── */}
       <AnimatePresence>
-        {phase === "vigil" && (
+        {phase === "vigil" && vigilStep >= 4 && (
           <motion.div
-            className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center z-50 pointer-events-none"
+            className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
+            style={{ backgroundColor: "rgba(0,0,0,0.55)", zIndex: 50 }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.8 }}
+            transition={{ duration: 0.7 }}
           >
             <motion.p
-              className="font-['Kodchasan:Bold',sans-serif] text-[28px] text-white text-center tracking-[-0.56px] mb-[8px]"
-              initial={{ opacity: 0, y: 16 }}
+              style={{ fontFamily: "'Kodchasan', sans-serif", fontWeight: 700, fontSize: 26, color: "white", textAlign: "center", marginBottom: 6 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.2 }}
+              transition={{ delay: 0.3 }}
             >
-              Clorb Vigil
+              {VIGIL_COPY.overlayTitle}
             </motion.p>
             <motion.p
-              className="font-['Work_Sans:Medium',sans-serif] text-[14px] text-white/70 text-center"
+              style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 14, color: "rgba(255,255,255,0.7)", textAlign: "center" }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 1.8 }}
+              transition={{ delay: 0.7 }}
             >
-              The task has been abandoned. 🕯️
+              {VIGIL_COPY.overlayBody}
             </motion.p>
-            <motion.div
-              className="flex gap-[16px] mt-[20px]"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 2.4 }}
-            >
+            <motion.div className="flex gap-[16px] mt-[20px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.0 }}>
               {[0, 1, 2].map((i) => (
-                <motion.span
-                  key={i}
-                  className="text-[24px]"
-                  animate={{ scale: [1, 1.15, 1], opacity: [0.7, 1, 0.7] }}
-                  transition={{ duration: 1.2 + i * 0.2, repeat: Infinity }}
-                >
-                  🕯️
-                </motion.span>
+                <motion.span key={i} style={{ fontSize: 22 }} animate={{ scale: [1, 1.15, 1], opacity: [0.7, 1, 0.7] }} transition={{ duration: 1.3 + i * 0.2, repeat: Infinity }}>🕯️</motion.span>
               ))}
             </motion.div>
           </motion.div>

@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from "react-router";
 import { motion } from "motion/react";
 import { useState } from "react";
-import { ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronUp, ChevronDown, ArrowLeft } from "lucide-react";
 import svgPaths from "../../imports/IPhone168/svg-hh2rnczwo7";
 import imgUntitled500X500Px61 from "../../imports/IPhone168/749af56786e9c6161adfcf899904dec36b1941a5.png";
 import { getTaskById } from "../constants/tasks";
@@ -41,6 +41,15 @@ export default function TimeSelect() {
 
   return (
     <div className="bg-[#ffa2e3] relative size-full overflow-hidden">
+      {/* Back button */}
+      <motion.button
+        onClick={() => navigate(-1)}
+        style={{ position: "absolute", top: 16, left: 16, zIndex: 20, width: 38, height: 38, borderRadius: "50%", backgroundColor: "black", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+        whileTap={{ scale: 0.88 }}
+      >
+        <ArrowLeft size={18} color="white" />
+      </motion.button>
+
       <p className="-translate-x-1/2 absolute font-['Kodchasan:Bold',sans-serif] leading-[1.2] left-[calc(50%+0.5px)] not-italic text-[#020202] text-[36px] text-center top-[58px] tracking-[-0.72px] w-[350px]">
         How long will you be {currentTask.actionName}?
       </p>

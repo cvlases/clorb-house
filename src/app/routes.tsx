@@ -1,4 +1,6 @@
 import { createBrowserRouter } from "react-router";
+import PortraitLayout from "./layouts/PortraitLayout";
+import LandscapeLayout from "./layouts/LandscapeLayout";
 import Welcome from "./screens/Welcome";
 import MeetClorb from "./screens/MeetClorb";
 import TaskSelect from "./screens/TaskSelect";
@@ -10,40 +12,26 @@ import TodoList from "./screens/TodoList";
 import Shelf from "./screens/Shelf";
 
 export const router = createBrowserRouter([
+  // ── Portrait screens ────────────────────────────────────────────────────
   {
-    path: "/",
-    Component: Welcome,
+    element: <PortraitLayout />,
+    children: [
+      { path: "/",               Component: Welcome },
+      { path: "/meet",           Component: MeetClorb },
+      { path: "/todo",           Component: TodoList },
+      { path: "/task-select/:task", Component: TaskSelect },
+      { path: "/time-select/:task", Component: TimeSelect },
+      { path: "/reward",         Component: Reward },
+      { path: "/funeral",        Component: Funeral },
+      { path: "/shelf",          Component: Shelf },
+    ],
   },
+
+  // ── Landscape: task execution room ──────────────────────────────────────
   {
-    path: "/meet",
-    Component: MeetClorb,
-  },
-  {
-    path: "/todo",
-    Component: TodoList,
-  },
-  {
-    path: "/task-select/:task",
-    Component: TaskSelect,
-  },
-  {
-    path: "/time-select/:task",
-    Component: TimeSelect,
-  },
-  {
-    path: "/room/:task",
-    Component: ExecutionRoom,
-  },
-  {
-    path: "/reward",
-    Component: Reward,
-  },
-  {
-    path: "/funeral",
-    Component: Funeral,
-  },
-  {
-    path: "/shelf",
-    Component: Shelf,
+    element: <LandscapeLayout />,
+    children: [
+      { path: "/room/:task",     Component: ExecutionRoom },
+    ],
   },
 ]);
