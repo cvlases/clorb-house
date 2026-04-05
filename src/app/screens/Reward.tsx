@@ -4,6 +4,10 @@ import { useState, useEffect } from "react";
 import confetti from "canvas-confetti";
 import imgUntitled500X500Px61 from "../../imports/IPhone161/749af56786e9c6161adfcf899904dec36b1941a5.png";
 import { recordCompletion } from "../hooks/useGameState";
+import { COLLECTIBLE_ASSETS } from "../constants/taskConfig";
+
+// TODO: Swap the 🎁 placeholder below with presentBox once the asset is added:
+// import presentBox from "@/assets/present_box.png";
 
 type Rarity = "common" | "uncommon" | "rare" | "legendary";
 
@@ -157,7 +161,15 @@ export default function RewardScreen() {
                   {reward.rarity}
                 </div>
 
-                <div className="text-[88px] mb-[12px]">{reward.emoji}</div>
+                {COLLECTIBLE_ASSETS[reward.name] ? (
+                  <img
+                    src={COLLECTIBLE_ASSETS[reward.name]}
+                    alt={reward.name}
+                    className="w-[100px] h-[100px] object-contain mb-[12px] drop-shadow-lg"
+                  />
+                ) : (
+                  <div className="text-[88px] mb-[12px]">{reward.emoji}</div>
+                )}
 
                 <p className="font-['Work_Sans:Bold',sans-serif] font-bold text-[18px] text-black text-center mb-[8px]">
                   {reward.name}

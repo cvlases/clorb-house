@@ -7,27 +7,27 @@ export const TASKS = [
     emoji: "🧺",
     estimatedTime: "5min per 8 pieces",
     clorbCount: 103,
-    gifAsset: "/src/assets/doing-laundry.GIF",
+    category: "frequent",
   },
   {
     id: "dishes",
-    name: "Dishes",
+    name: "Clean the Dishes",
     actionName: "doing dishes",
     color: "#FD9FDD",
     emoji: "🍽️",
     estimatedTime: "5-10 minutes",
     clorbCount: 127,
-    gifAsset: "/src/assets/washing-dishes.GIF",
+    category: "frequent",
   },
   {
     id: "tidying",
-    name: "Tidying",
+    name: "Tidying Up",
     actionName: "tidying up",
     color: "#FFF172",
     emoji: "🧹",
     estimatedTime: "10-20 minutes",
     clorbCount: 89,
-    gifAsset: "/src/assets/cleaning-table.GIF",
+    category: "frequent",
   },
   {
     id: "cooking",
@@ -37,7 +37,7 @@ export const TASKS = [
     emoji: "🍳",
     estimatedTime: "20-45 minutes",
     clorbCount: 62,
-    gifAsset: null,
+    category: "kitchen",
   },
   {
     id: "working",
@@ -47,7 +47,7 @@ export const TASKS = [
     emoji: "💻",
     estimatedTime: "25-90 minutes",
     clorbCount: 214,
-    gifAsset: null,
+    category: "frequent",
   },
   {
     id: "studying",
@@ -57,7 +57,7 @@ export const TASKS = [
     emoji: "📚",
     estimatedTime: "25-60 minutes",
     clorbCount: 156,
-    gifAsset: null,
+    category: "frequent",
   },
   {
     id: "errands",
@@ -67,9 +67,11 @@ export const TASKS = [
     emoji: "🚗",
     estimatedTime: "15-60 minutes",
     clorbCount: 41,
-    gifAsset: null,
+    category: "frequent",
   },
 ];
+
+export const TASK_CATEGORIES = ["frequent", "kitchen", "bedroom", "office"] as const;
 
 export const CLORB_MESSAGES = [
   "The digital dishes are clean. Are the real ones? I doubt it.",
@@ -86,7 +88,7 @@ export const CLORB_MESSAGES = [
   "Stay strong. The task cannot hurt you.",
 ];
 
-export type TaskId = typeof TASKS[number]["id"];
+export type TaskId = (typeof TASKS)[number]["id"];
 
 export function getTaskById(id: string | undefined) {
   return TASKS.find((task) => task.id === id) || TASKS[0];

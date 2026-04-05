@@ -45,7 +45,7 @@ export default function MeetClorb() {
         className="-translate-x-1/2 absolute bg-black content-stretch flex gap-[12px] items-center justify-center left-[calc(50%+2.5px)] px-[77px] py-[14px] rounded-[24px] top-[714px] w-[335px] cursor-pointer hover:bg-[#333] transition-colors"
         whileTap={{ scale: 0.95 }}
       >
-        <p className="font-['Work_Sans:Medium',sans-serif] font-medium leading-[20px] relative shrink-0 text-[16px] text-center text-white whitespace-nowrap">Enter the clorb house</p>
+        <p className="font-['Work_Sans:Medium',sans-serif] font-medium leading-[20px] relative shrink-0 text-[16px] text-center text-white whitespace-nowrap">Enter Clorbhouse</p>
       </motion.button>
     </div>
   );

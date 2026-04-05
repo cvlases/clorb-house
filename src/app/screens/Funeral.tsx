@@ -17,7 +17,7 @@ export default function Funeral() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      navigate("/");
+      navigate("/todo");
     }, 5000);
     return () => clearTimeout(timer);
   }, [navigate]);
