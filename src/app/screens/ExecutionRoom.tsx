@@ -32,7 +32,7 @@ type Phase = "active" | "give-up-confirm" | "vigil" | "complete";
 
 // ─── Mock room data ────────────────────────────────────────────────────────────
 // Replace `makeMockClorbs` with a backend fetch when ready.
-const ALL_TASK_IDS = ["laundry", "emails", "bed", "dishes", "sweep", "trash", "misc"];
+const ALL_TASK_IDS = ["laundry", "emails", "bed", "dishes", "sweep", "trash", "dry", "wipe", "misc"];
 
 const ROOM_POSITIONS = [
   { xPct: 10, yPct: 30 },

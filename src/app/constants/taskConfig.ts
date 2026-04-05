@@ -6,6 +6,8 @@ export const TASK_TAGLINES: Record<string, string> = {
   dishes:  "they've been 'soaking' for three days.",
   sweep:   "just shove it under the bed. wait, no.",
   trash:   "the bag is full and you know it.",
+  dry:     "still in the rack. still wet. still there.",
+  wipe:    "the surfaces have forgotten what clean feels like.",
   misc:    "whatever it is, it must be done.",
 };
 
@@ -15,33 +17,42 @@ import dishesIcon   from "@/assets/icons/dishes_icon.png";
 import sweepIcon    from "@/assets/icons/sweep_icon.png";
 import miscIcon     from "@/assets/icons/miscellaneous_icon.png";
 import emailIcon    from "@/assets/icons/email_icon.png";
-import listIcon     from "@/assets/icons/list_icon.png";
+import bedIcon      from "@/assets/icons/bed_icon.png";
 import trashIcon    from "@/assets/icons/trash_icon.png";
+import dryIcon      from "@/assets/icons/dry_dishes_icon.png";
+import wipeIcon     from "@/assets/icons/wipe_surfaces_icon.png";
 
 export const TASK_ICONS: Record<string, string> = {
   laundry: laundryIcon,
   emails:  emailIcon,
-  bed:     listIcon,
+  bed:     bedIcon,
   dishes:  dishesIcon,
   sweep:   sweepIcon,
   trash:   trashIcon,
+  dry:     dryIcon,
+  wipe:    wipeIcon,
   misc:    miscIcon,
 };
 
 // ─── Task Animations ─────────────────────────────────────────────────────────
-import laundryAnim from "@/assets/clorb_animations/doing-laundry.GIF";
-import dishesAnim  from "@/assets/clorb_animations/washing-dishes.GIF";
-import dryingAnim  from "@/assets/clorb_animations/drying-dishes.GIF";
-import tidyAnim    from "@/assets/clorb_animations/cleaning-table.GIF";
-import trashAnim   from "@/assets/clorb_animations/taking-out-trash.GIF";
+import laundryAnim    from "@/assets/clorb_animations/doing-laundry.GIF";
+import dishesAnim     from "@/assets/clorb_animations/washing-dishes.GIF";
+import dryingAnim     from "@/assets/clorb_animations/drying-dishes.GIF";
+import wipeAnim       from "@/assets/clorb_animations/cleaning-table.GIF";
+import trashAnim      from "@/assets/clorb_animations/taking-out-trash.GIF";
+import bedAnim        from "@/assets/clorb_animations/Clorb_Making_Bed.png";
+import sweepAnim      from "@/assets/clorb_animations/sweep.gif";
+import emailAnim      from "@/assets/clorb_animations/check_email.gif";
 
 export const TASK_ANIMATIONS: Record<string, string | null> = {
   laundry: laundryAnim,
-  emails:  null,
-  bed:     null,
+  emails:  emailAnim,
+  bed:     bedAnim,
   dishes:  dishesAnim,
-  sweep:   tidyAnim,
+  sweep:   sweepAnim,
   trash:   trashAnim,
+  dry:     dryingAnim,
+  wipe:    wipeAnim,
   misc:    null,
 };
 
@@ -126,6 +137,22 @@ export const TASK_SPEECH_LINES: Record<string, string[]> = {
     "the journey down the hall was long",
     "new bag in. we are reset.",
     "why is it always heavier than expected",
+  ],
+  dry: [
+    "the rack has been full for two days",
+    "one by one. we go one by one.",
+    "found a bowl i forgot existed",
+    "this is meditative actually",
+    "stacking them so neatly rn",
+    "almost done. almost.",
+  ],
+  wipe: [
+    "the counter was... sticky. it's not anymore.",
+    "found rings from cups i don't remember",
+    "this is satisfying in a weird way",
+    "the spray bottle is my weapon",
+    "it's clean. it's so clean.",
+    "wiped UNDER the toaster. elite behavior.",
   ],
   misc: [
     "misc chore hours. we move.",
