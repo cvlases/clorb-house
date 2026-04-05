@@ -22,19 +22,19 @@ interface Reward {
 const rewards: Reward[] = [
   { name: "A single piece of dry macaroni", rarity: "common", emoji: "🍝", description: "Just one. Perfectly al-dente-dry." },
   { name: "A slightly damp sponge", rarity: "common", emoji: "🧽", description: "It leaves a small water puddle under it." },
-  { name: "A crumpled flashcard", rarity: "common", emoji: "📇", description: "The answer is on the other side. Always." },
+  { name: "Lukewarm soup", rarity: "common", emoji: "📇", description: "The answer is on the other side. Always." },
   { name: "An expired parking ticket", rarity: "common", emoji: "🎫", description: "From a street that no longer exists." },
-  { name: "World's Okayest Clorb Mug", rarity: "uncommon", emoji: "☕", description: "You're not great. You're okay." },
+  { name: "Participation award", rarity: "uncommon", emoji: "☕", description: "You're not great. You're okay." },
   { name: "A receipt from 2018", rarity: "uncommon", emoji: "🧾", description: "Faded text. Oddly long. What did you buy?" },
   { name: "A used sticky note", rarity: "uncommon", emoji: "📝", description: "It still has a tiny bit of stick left." },
-  { name: "Holey Socks (single)", rarity: "uncommon", emoji: "🧦", description: "One sock. Multiple holes. Infinite character." },
-  { name: "Tax Form Hat", rarity: "rare", emoji: "🎩", description: "A 1040 form folded into a paper boat hat." },
-  { name: "A mysterious lost key", rarity: "rare", emoji: "🗝️", description: "Opens something, somewhere, probably." },
+  { name: "A single sock", rarity: "uncommon", emoji: "🧦", description: "One sock. Multiple holes. Infinite character." },
+  { name: "A soggy tea bag", rarity: "rare", emoji: "🎩", description: "A 1040 form folded into a paper boat hat." },
+  { name: "A button from a shirt you don't own", rarity: "rare", emoji: "🗝️", description: "Opens something, somewhere, probably." },
   { name: "A stale baguette", rarity: "rare", emoji: "🥖", description: "Weapon-grade density. Still somehow delicious." },
-  { name: "An empty coffee cup", rarity: "rare", emoji: "🫗", description: "Still radiates the ghost of caffeine." },
-  { name: "The Ultimate Argyle Sock", rarity: "legendary", emoji: "🧦", description: "A single, unmatched argyle sock. Fashion." },
-  { name: "A vintage bottlecap", rarity: "legendary", emoji: "🪙", description: "Worth exactly one feeling of accomplishment." },
-  { name: "Melted Chocolate Bar", rarity: "legendary", emoji: "🍫", description: "Still edible. Probably. Definitely eat it." },
+  { name: "A half-baked pizza pocket", rarity: "rare", emoji: "🫗", description: "Still radiates the ghost of caffeine." },
+  { name: "A loose rubber band", rarity: "legendary", emoji: "🧦", description: "A single, unmatched argyle sock. Fashion." },
+  { name: "A very nice spoon", rarity: "legendary", emoji: "🪙", description: "Worth exactly one feeling of accomplishment." },
+  { name: "A polly pocket shoe", rarity: "legendary", emoji: "🍫", description: "Still edible. Probably. Definitely eat it." },
 ];
 
 const rarityColors: Record<Rarity, string> = {
