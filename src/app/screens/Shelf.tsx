@@ -1,9 +1,10 @@
 import { motion, AnimatePresence } from "motion/react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { getCollectedItems, CollectedItem } from "../hooks/useGameState";
 import { COLLECTIBLE_ASSETS } from "../constants/taskConfig";
 import { TopNav } from "../components/TopNav";
+import { supabase } from "../../lib/supabase";
+import { REWARDS, CHORE_LABELS } from "../../config/rewards";
 
 // ─── Rarity sort order ───────────────────────────────────────────────────────
 const rarityOrder: Record<string, number> = {
@@ -50,104 +51,22 @@ function ShelfPlank({ variant = 0 }: { variant?: number }) {
   );
 }
 
-// ─── Bounty requirements ──────────────────────────────────────────────────────
-interface Requirement {
-  itemName: string; // must match CollectedItem.name exactly
-  count: number;
-}
-
-interface Bounty {
+// ─── Shelf item (from DB) ─────────────────────────────────────────────────────
+interface ShelfItem {
   id: string;
-  name: string;
-  requirements: Requirement[];
-  reward: string;
-  emoji: string;
-  claimed: boolean;
+  item_key: string;
+  earned_at: string;
 }
 
-const INITIAL_BOUNTIES: Omit<Bounty, "claimed">[] = [
-  {
-    id: "mise",
-    name: "The Mise en Place Bundle",
-    requirements: [
-      { itemName: "A single piece of dry macaroni", count: 3 },
-      { itemName: "A slightly damp sponge",         count: 1 },
-    ],
-    reward: "15% discount at a specialty spice retailer",
-    emoji: "🧂",
-  },
-  {
-    id: "design",
-    name: "The Design Sprint Survivor",
-    requirements: [
-      { itemName: "A used sticky note",  count: 3 },
-      { itemName: "An empty coffee cup", count: 1 },
-    ],
-    reward: "$5 credit for a digital asset store (fonts, UI kits...)",
-    emoji: "🎨",
-  },
-  {
-    id: "polyglot",
-    name: "The Polyglot Pack",
-    requirements: [
-      { itemName: "A crumpled flashcard", count: 4 },
-      { itemName: "A stale baguette",     count: 1 },
-    ],
-    reward: "1-month premium language learning subscription",
-    emoji: "🗣️",
-  },
-  {
-    id: "commuter",
-    name: "The Commuter's Relief",
-    requirements: [
-      { itemName: "An expired parking ticket", count: 2 },
-      { itemName: "A mysterious lost key",     count: 1 },
-    ],
-    reward: "Free premium car wash coupon",
-    emoji: "🚗",
-  },
-  {
-    id: "laundry",
-    name: "The Laundry Day Haul",
-    requirements: [
-      { itemName: "Holey Socks (single)",  count: 5 },
-      { itemName: "A vintage bottlecap",   count: 1 },
-    ],
-    reward: "$2 Amazon coupon for laundry detergent",
-    emoji: "🧺",
-  },
-  {
-    id: "datenight",
-    name: "The Date Night Stash",
-    requirements: [
-      { itemName: "The Ultimate Argyle Sock", count: 2 },
-      { itemName: "Melted Chocolate Bar",     count: 1 },
-    ],
-    reward: "Buy-One-Get-One AMC movie ticket voucher",
-    emoji: "🎬",
-  },
-];
-
-// Count how many of each item name the player has
-function buildInventory(collected: CollectedItem[]): Map<string, number> {
-  const map = new Map<string, number>();
-  for (const item of collected) {
-    map.set(item.name, (map.get(item.name) ?? 0) + 1);
-  }
-  return map;
-}
-
-// Returns { met: boolean, unmet: { itemName, need, have }[] }
-function checkRequirements(
-  reqs: Requirement[],
-  inventory: Map<string, number>
+// Returns { met, needed } for a single reward vs chore session counts
+function checkReward(
+  requiresChoreType: string,
+  requiresCount: number,
+  choreCounts: Record<string, number>
 ) {
-  const unmet: { itemName: string; need: number; have: number }[] = [];
-  for (const req of reqs) {
-    const have = inventory.get(req.itemName) ?? 0;
-    if (have < req.count) unmet.push({ itemName: req.itemName, need: req.count, have });
-  }
-  return { met: unmet.length === 0, unmet };
+  const have   = choreCounts[requiresChoreType] ?? 0;
+  const needed = Math.max(0, (requiresCount ?? 0) - (have ?? 0));
+  return { met: needed === 0, needed, have }
 }
 
 function chunkArray<T>(arr: T[], size: number): T[][] {
@@ -159,29 +78,61 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
 // ─── Component ───────────────────────────────────────────────────────────────
 export default function Shelf() {
   const navigate = useNavigate();
-  const [items,     setItems]     = useState<CollectedItem[]>([]);
-  const [activeTab, setActiveTab] = useState<"shelf" | "rewards">("shelf");
-  const [newestId,  setNewestId]  = useState<string | null>(null);
-  const [inventory, setInventory] = useState<Map<string, number>>(new Map());
-  const [bounties,  setBounties]  = useState<Bounty[]>(() =>
-    INITIAL_BOUNTIES.map((b) => ({ ...b, claimed: false }))
-  );
+  const [items,       setItems]       = useState<ShelfItem[]>([]);
+  const [activeTab,   setActiveTab]   = useState<"shelf" | "rewards">("shelf");
+  const [newestId,    setNewestId]    = useState<string | null>(null);
+  const [choreCounts, setChoreCounts] = useState<Record<string, number>>({});
+  const [redeemedIds, setRedeemedIds] = useState<Set<string>>(new Set());
+  const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
-    const collected = getCollectedItems();
-    const sorted = [...collected].sort(
-      (a, b) => rarityOrder[a.rarity] - rarityOrder[b.rarity] || b.collectedAt - a.collectedAt
-    );
-    setItems(sorted);
-    setInventory(buildInventory(collected));
-    if (sorted.length > 0) {
-      const latest = sorted.reduce((a, b) => (a.collectedAt > b.collectedAt ? a : b));
-      setNewestId(latest.id);
+    async function load() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoadingData(false); return; }
+
+      // Load shelf items (collectibles — item_key is a collectible name)
+      const { data: shelfData } = await supabase
+        .from("shelf_items")
+        .select("id, item_key, earned_at")
+        .eq("user_id", user.id)
+        .order("earned_at", { ascending: false });
+
+      const collectibles = (shelfData ?? []).filter(
+        (item: ShelfItem) => COLLECTIBLE_ASSETS[item.item_key] !== undefined
+      );
+      setItems(collectibles);
+      if (collectibles.length > 0) setNewestId(collectibles[0].id);
+
+      // Track which reward ids have been redeemed (item_key = reward id)
+      const rewardIds = new Set<string>(
+        (shelfData ?? [])
+          .filter((item: ShelfItem) => REWARDS.some((r) => r.id === item.item_key))
+          .map((item: ShelfItem) => item.item_key)
+      );
+      setRedeemedIds(rewardIds);
+
+      // Count completed chore sessions per type
+      const { data: sessions } = await supabase
+        .from("chore_sessions")
+        .select("chore_type")
+        .eq("user_id", user.id)
+        .eq("status", "completed");
+
+      const counts: Record<string, number> = {};
+      for (const s of sessions ?? []) {
+        counts[s.chore_type] = (counts[s.chore_type] ?? 0) + 1;
+      }
+      setChoreCounts(counts);
+      setLoadingData(false);
     }
+    load();
   }, []);
 
-  const handleClaim = (bountyId: string) => {
-    setBounties((prev) => prev.map((b) => (b.id === bountyId ? { ...b, claimed: true } : b)));
+  const handleRedeem = async (rewardId: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from("shelf_items").insert({ user_id: user.id, item_key: rewardId });
+    setRedeemedIds((prev) => new Set([...prev, rewardId]));
   };
 
   const shelfRows = chunkArray(items, 3);
@@ -197,7 +148,7 @@ export default function Shelf() {
           Clorb's Collections
         </p>
         <p style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 12, color: "rgba(0,0,0,0.5)" }}>
-          {items.length} item{items.length !== 1 ? "s" : ""} collected
+          {loadingData ? "…" : `${items.length} item${items.length !== 1 ? "s" : ""} collected`}
         </p>
       </div>
 
@@ -247,7 +198,7 @@ export default function Shelf() {
                   <div className="flex justify-around items-end px-[16px] pt-[20px] pb-[4px]">
                     {row.map((item) => {
                       const isNew = item.id === newestId;
-                      const assetSrc = COLLECTIBLE_ASSETS[item.name];
+                      const assetSrc = COLLECTIBLE_ASSETS[item.item_key];
 
                       return (
                         <motion.div
@@ -283,7 +234,7 @@ export default function Shelf() {
                             )}
                           </div>
                           <p style={{ fontFamily: "'Work Sans', sans-serif", fontWeight: 600, fontSize: 9, textAlign: "center", lineHeight: "12px", color: "black", maxWidth: 72 }}>
-                            {item.name}
+                            {item.item_key}
                           </p>
                         </motion.div>
                       );
@@ -305,105 +256,97 @@ export default function Shelf() {
         </div>
       )}
 
-      {/* ── The Clorb Rewards ─────────────────────────────────────────── */}
+      {/* ── Rewards ──────────────────────────────────────────────────────── */}
       {activeTab === "rewards" && (
         <div className="flex-1 overflow-y-auto px-[16px] py-[12px]">
           <p style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 12, color: "rgba(0,0,0,0.5)", textAlign: "center", marginBottom: 12, lineHeight: 1.5 }}>
-            Collect items, meet the requirements, redeem real-world rewards.
+            Complete chores, meet the requirements, redeem real-world rewards.
           </p>
-          <div className="flex flex-col gap-[10px]">
-            {bounties.map((bounty) => {
-              const { met, unmet } = checkRequirements(bounty.requirements, inventory);
+          {loadingData ? (
+            <p style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 13, textAlign: "center", color: "rgba(0,0,0,0.4)", marginTop: 32 }}>
+              Loading...
+            </p>
+          ) : (
+            <div className="flex flex-col gap-[10px]">
+              {REWARDS.map((reward) => {
+                const { met, needed, have } = checkReward(reward.requiresChoreType, reward.requiresCount, choreCounts);
+                const claimed = redeemedIds.has(reward.id);
+                const choreLabel = CHORE_LABELS[reward.requiresChoreType] ?? reward.requiresChoreType;
 
-              return (
-                <motion.div
-                  key={bounty.id}
-                  className="bg-white border-2 border-black rounded-[16px] p-[14px] shadow-[2px_2px_0_0_#000]"
-                  animate={bounty.claimed ? { opacity: 0.6 } : { opacity: 1 }}
-                >
-                  <div className="flex items-start gap-[10px]">
-                    <span style={{ fontSize: 26, flexShrink: 0 }}>{bounty.emoji}</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontFamily: "'Work Sans', sans-serif", fontWeight: 700, fontSize: 13, color: "black", lineHeight: 1.3, marginBottom: 3 }}>
-                        {bounty.name}
-                        {bounty.claimed && (
-                          <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 400, color: "rgba(0,0,0,0.5)" }}>
-                            (claimed)
-                          </span>
-                        )}
-                      </p>
-                      {/* Requirements list */}
-                      <div style={{ marginBottom: 4 }}>
-                        {bounty.requirements.map((req) => {
-                          const have = inventory.get(req.itemName) ?? 0;
-                          const satisfied = have >= req.count;
-                          return (
-                            <p key={req.itemName} style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 11, color: satisfied ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.85)", lineHeight: 1.5 }}>
-                              {satisfied ? "✓" : "○"} {req.count}× {req.itemName}
-                              {!satisfied && !bounty.claimed && (
-                                <span style={{ color: "#cc4444", marginLeft: 4 }}>
-                                  (have {have})
-                                </span>
-                              )}
-                            </p>
-                          );
-                        })}
+                return (
+                  <motion.div
+                    key={reward.id}
+                    className="bg-white border-2 border-black rounded-[16px] p-[14px] shadow-[2px_2px_0_0_#000]"
+                    animate={claimed ? { opacity: 0.6 } : { opacity: 1 }}
+                  >
+                    <div className="flex items-start gap-[10px]">
+                      <span style={{ fontSize: 26, flexShrink: 0 }}>{reward.emoji}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontFamily: "'Work Sans', sans-serif", fontWeight: 700, fontSize: 13, color: "black", lineHeight: 1.3, marginBottom: 3 }}>
+                          {reward.name}
+                          {claimed && (
+                            <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 400, color: "rgba(0,0,0,0.5)" }}>
+                              (claimed)
+                            </span>
+                          )}
+                        </p>
+                        {/* Requirement row */}
+                        <p style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 11, color: met ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.85)", lineHeight: 1.5, marginBottom: 4 }}>
+                          {met ? "✓" : "○"} {reward.requiresCount}× {choreLabel} completed
+                          {!met && !claimed && (
+                            <span style={{ color: "#cc4444", marginLeft: 4 }}>({have}/{reward.requiresCount})</span>
+                          )}
+                        </p>
+                        <p style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 11, color: "black", lineHeight: 1.4 }}>
+                          🎁 {reward.reward}
+                        </p>
                       </div>
-                      <p style={{ fontFamily: "'Work Sans', sans-serif", fontSize: 11, color: "black", lineHeight: 1.4 }}>
-                        🎁 {bounty.reward}
-                      </p>
                     </div>
-                  </div>
 
-                  {/* Redeem / Locked / Claimed */}
-                  <div className="mt-[10px] flex justify-end">
-                    <AnimatePresence mode="wait">
-                      {bounty.claimed ? (
-                        <motion.div
-                          key="claimed"
-                          style={{ backgroundColor: "rgba(0,0,0,0.1)", border: "1px solid rgba(0,0,0,0.2)", borderRadius: 10, padding: "6px 14px" }}
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                        >
-                          <p style={{ fontFamily: "'Work Sans', sans-serif", fontWeight: 600, fontSize: 12, color: "rgba(0,0,0,0.5)" }}>
-                            Claimed ✓
-                          </p>
-                        </motion.div>
-                      ) : met ? (
-                        <motion.button
-                          key="redeem"
-                          onClick={() => handleClaim(bounty.id)}
-                          style={{ backgroundColor: "#fff85a", border: "2px solid black", borderRadius: 10, padding: "6px 14px", cursor: "pointer", boxShadow: "2px 2px 0 0 #000", fontFamily: "'Work Sans', sans-serif", fontWeight: 600, fontSize: 12, color: "black" }}
-                          whileTap={{ scale: 0.93 }}
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                        >
-                          Redeem
-                        </motion.button>
-                      ) : (
-                        <motion.div
-                          key="locked"
-                          style={{ backgroundColor: "rgba(0,0,0,0.05)", border: "1.5px solid rgba(0,0,0,0.2)", borderRadius: 10, padding: "6px 14px" }}
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                        >
-                          <p style={{ fontFamily: "'Work Sans', sans-serif", fontWeight: 600, fontSize: 11, color: "rgba(0,0,0,0.4)" }}>
-                            🔒 Need{" "}
-                            {unmet.map((u, i) => (
-                              <span key={u.itemName}>
-                                {Math.max(0, (u.need ?? 0) - (u.have ?? 0))} more {u.itemName.toLowerCase()}
-                                {i < unmet.length - 1 ? ", " : ""}
-                              </span>
-                            ))}
-                          </p>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
+                    {/* Redeem / Locked / Claimed */}
+                    <div className="mt-[10px] flex justify-end">
+                      <AnimatePresence mode="wait">
+                        {claimed ? (
+                          <motion.div
+                            key="claimed"
+                            style={{ backgroundColor: "rgba(0,0,0,0.1)", border: "1px solid rgba(0,0,0,0.2)", borderRadius: 10, padding: "6px 14px" }}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                          >
+                            <p style={{ fontFamily: "'Work Sans', sans-serif", fontWeight: 600, fontSize: 12, color: "rgba(0,0,0,0.5)" }}>
+                              Claimed ✓
+                            </p>
+                          </motion.div>
+                        ) : met ? (
+                          <motion.button
+                            key="redeem"
+                            onClick={() => handleRedeem(reward.id)}
+                            style={{ backgroundColor: "#fff85a", border: "2px solid black", borderRadius: 10, padding: "6px 14px", cursor: "pointer", boxShadow: "2px 2px 0 0 #000", fontFamily: "'Work Sans', sans-serif", fontWeight: 600, fontSize: 12, color: "black" }}
+                            whileTap={{ scale: 0.93 }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                          >
+                            Redeem
+                          </motion.button>
+                        ) : (
+                          <motion.div
+                            key="locked"
+                            style={{ backgroundColor: "rgba(0,0,0,0.05)", border: "1.5px solid rgba(0,0,0,0.2)", borderRadius: 10, padding: "6px 14px" }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                          >
+                            <p style={{ fontFamily: "'Work Sans', sans-serif", fontWeight: 600, fontSize: 11, color: "rgba(0,0,0,0.4)" }}>
+                              🔒 {needed} more {choreLabel}{needed !== 1 ? "s" : ""} needed
+                            </p>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

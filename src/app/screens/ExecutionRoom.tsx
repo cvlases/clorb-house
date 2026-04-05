@@ -5,6 +5,8 @@ import { Check, X, MessageCircle } from "lucide-react";
 import imgClorb from "../../imports/IPhone1612/749af56786e9c6161adfcf899904dec36b1941a5.png";
 import { CLORB_MESSAGES, getTaskById } from "../constants/tasks";
 import { TASK_ANIMATIONS, getSpeechLine, VIGIL_COPY } from "../constants/taskConfig";
+import { useRoom } from "../../hooks/useRoom";
+import { useChoreSession } from "../../hooks/useChoreSession";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -75,8 +77,9 @@ export default function ExecutionRoom() {
   const duration   = parseInt(searchParams.get("duration") || "30");
 
   const currentTask = getTaskById(task);
-  const [roomClorbs]  = useState<RoomClorb[]>(() => makeMockClorbs(currentTask.id));
-  const vigilCircle   = useRef(getVigilPositions(roomClorbs.length));
+  const { roomClorbs, leaveRoom } = useRoom(currentTask.id);
+  const { startSession, completeSession, abandonSession } = useChoreSession();
+  const vigilCircle   = useRef<ReturnType<typeof getVigilPositions>>([]);
 
   const [phase,       setPhase]      = useState<Phase>("active");
   const [vigilStep,   setVigilStep]  = useState(0);
@@ -94,6 +97,18 @@ export default function ExecutionRoom() {
   timeLeftRef.current = timeLeft;
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
+
+  // ── Start chore session on mount ─────────────────────────────────────────
+  useEffect(() => {
+    startSession(currentTask.id);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Abandon session on hard exit (tab close / refresh) ───────────────────
+  useEffect(() => {
+    const onUnload = () => { abandonSession(); leaveRoom(); };
+    window.addEventListener("beforeunload", onUnload);
+    return () => window.removeEventListener("beforeunload", onUnload);
+  }, [abandonSession, leaveRoom]);
 
   // ── Orientation lock ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -120,6 +135,7 @@ export default function ExecutionRoom() {
         if (prev <= 1) {
           clearInterval(t);
           setPhase("complete");
+          completeSession().then(() => leaveRoom());
           setTimeout(() => navigate("/reward"), 600);
           return 0;
         }
@@ -144,14 +160,16 @@ export default function ExecutionRoom() {
 
   // ── Vigil sequencer ────────────────────────────────────────────────────────
   const triggerVigil = useCallback(() => {
+    vigilCircle.current = getVigilPositions(roomClorbs.length || 6);
     setPhase("vigil");
     setHoveredClorb(null);
+    abandonSession();
     setVigilStep(1);                               // (1) user clorb drifts to center
     setTimeout(() => setVigilStep(2), 2000);       // (2) surrounding clorbs form circle
     setTimeout(() => setVigilStep(3), 3800);       // (3) gravestone rises + user clorb vanishes
     setTimeout(() => setVigilStep(4), 6000);       // (4) dark overlay + text
-    setTimeout(() => navigate("/todo"), 11000);    // (5) navigate
-  }, [navigate]);
+    setTimeout(() => { leaveRoom(); navigate("/todo"); }, 11000); // (5) navigate
+  }, [navigate, roomClorbs.length, abandonSession, leaveRoom]);
 
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
@@ -211,7 +229,7 @@ export default function ExecutionRoom() {
 
       {/* ── Clorb characters ──────────────────────────────────────────── */}
       {roomClorbs.map((clorb, idx) => {
-        const isUser     = idx === 0;
+        const isUser     = clorb.isUser ?? idx === 0;
         const isVigil    = phase === "vigil";
         const animSrc    = TASK_ANIMATIONS[clorb.taskId] ?? imgClorb;
         const vPos       = vigilCircle.current[idx];
@@ -383,7 +401,7 @@ export default function ExecutionRoom() {
             {[
               { label: "+5m",  bg: "#d99bfe", action: () => { setTimeLeft(p => p + 300); setAddTimeFlash(5); setTimeout(() => setAddTimeFlash(null), 1200); } },
               { label: "+10m", bg: "#6bc6ff", action: () => { setTimeLeft(p => p + 600); setAddTimeFlash(10); setTimeout(() => setAddTimeFlash(null), 1200); } },
-              { icon: <Check size={18} />, bg: "#beff6c", action: () => { setPhase("complete"); setTimeout(() => navigate("/reward"), 600); } },
+              { icon: <Check size={18} />, bg: "#beff6c", action: () => { setPhase("complete"); completeSession().then(() => leaveRoom()); setTimeout(() => navigate("/reward"), 600); } },
               { icon: <X size={18} />,    bg: "#ff576a", action: () => setPhase("give-up-confirm") },
             ].map((btn, i) => (
               <motion.button
