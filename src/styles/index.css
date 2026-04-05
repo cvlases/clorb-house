@@ -11,6 +11,8 @@ html, body {
   padding: 0;
   font-family: 'Work Sans', sans-serif;
   -webkit-font-smoothing: antialiased;
+  /* Prevent bounce/overscroll on iOS */
+  overscroll-behavior: none;
 }
 
 h1, h2, h3, h4, h5, h6 {

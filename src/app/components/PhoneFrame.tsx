@@ -6,10 +6,29 @@ interface Props {
 }
 
 /**
- * The phone frame wrapper. Portrait = 390×844, Landscape = 844×390.
- * Always centered on the page. Escapes the purple backdrop.
+ * On desktop: renders a fixed-size phone frame centered on the purple backdrop.
+ * On mobile (viewport width < 768px): fills the full viewport — no frame chrome.
  */
 export function PhoneFrame({ landscape = false, children }: Props) {
+  const isMobile =
+    typeof window !== "undefined" && window.innerWidth < 768;
+
+  if (isMobile) {
+    return (
+      <div
+        style={{
+          width: "100vw",
+          height: "100dvh",
+          position: "relative",
+          overflow: "hidden",
+          backgroundColor: "white",
+        }}
+      >
+        {children}
+      </div>
+    );
+  }
+
   const W = landscape ? 844 : 390;
   const H = landscape ? 390 : 844;
 
